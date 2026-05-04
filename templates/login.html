@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ server_name }} – Anmelden</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+</head>
+<body class="login-body">
+
+  <div class="login-card">
+
+    <div class="login-logo">
+      <div class="logo-icon"><i data-lucide="server"></i></div>
+      <span class="logo-text">{{ server_name }}</span>
+    </div>
+
+    <div>
+      <h1 class="login-heading">Anmelden</h1>
+      <p class="login-sub">Bitte melde dich mit deinen Zugangsdaten an.</p>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-error">{{ error }}</div>
+    {% endif %}
+
+    <form method="POST" action="/login" class="vform">
+      <label>Benutzername
+        <input type="text" name="username" autocomplete="username" autofocus required>
+      </label>
+      <label>Passwort
+        <input type="password" name="password" autocomplete="current-password" required>
+      </label>
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center">
+        Anmelden
+      </button>
+    </form>
+
+  </div>
+
+  <script>lucide.createIcons();</script>
+</body>
+</html>

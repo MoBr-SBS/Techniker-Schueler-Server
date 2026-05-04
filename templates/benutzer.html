@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Benutzerverwaltung{% endblock %}
+{% block page_title %}Benutzerverwaltung{% endblock %}
+
+{% block content %}
+<div class="page-cols">
+
+  <div>
+    <div class="section-label">Alle Benutzer</div>
+    <table class="noten-table">
+      <thead>
+        <tr>
+          <th>Benutzername</th>
+          <th>Rolle</th>
+          <th>Erstellt am</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        {% set is_self = u.id == session.get('user_id') %}
+        {% set last_admin = u.is_admin and admin_count <= 1 %}
+        <tr>
+          <td>
+            <span class="user-name-cell">
+              <i data-lucide="user"></i>
+              {{ u.username }}
+              {% if is_self %}<span class="badge-self">Du</span>{% endif %}
+            </span>
+          </td>
+          <td>
+            {% if u.is_admin %}
+            <span class="role-badge role-admin"><i data-lucide="shield"></i> Admin</span>
+            {% else %}
+            <span class="role-badge role-user"><i data-lucide="user"></i> Benutzer</span>
+            {% endif %}
+          </td>
+          <td class="mono text-muted">{{ u.erstellt_am[:10] }}</td>
+          <td>
+            {% if not is_self and not last_admin %}
+            <form method="POST" action="/admin/benutzer/delete/{{ u.id }}" style="display:contents">
+              <button type="submit" class="icon-btn icon-btn--danger" title="Löschen"
+                onclick="return confirm('Benutzer „{{ u.username }}" wirklich löschen?')">
+                <i data-lucide="trash-2"></i>
+              </button>
+            </form>
+            {% else %}
+            <span class="icon-btn" style="opacity:0.2;cursor:default" title="{{ 'Eigenes Konto' if is_self else 'Letzter Admin' }}">
+              <i data-lucide="lock"></i>
+            </span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="widget sidebar-form">
+    <div class="widget-header">
+      <i data-lucide="user-plus"></i>
+      <span>Benutzer anlegen</span>
+    </div>
+    <div class="widget-body">
+      <form method="POST" action="/admin/benutzer/add" class="vform">
+        <label>Benutzername *
+          <input type="text" name="username" placeholder="z. B. mueller" required>
+        </label>
+        <label>Passwort * <span class="form-hint">(min. 6 Zeichen)</span>
+          <input type="password" name="password" required minlength="6">
+        </label>
+        <label class="checkbox-label">
+          <input type="checkbox" name="is_admin">
+          <span>Administrator-Rechte</span>
+        </label>
+        <button type="submit" class="btn btn-primary">Anlegen</button>
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

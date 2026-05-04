@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Profil{% endblock %}
+{% block page_title %}Mein Profil{% endblock %}
+
+{% block content %}
+<div class="page-cols">
+
+  <div class="profil-main">
+
+    <!-- WebUntis-Zugangsdaten -->
+    <div class="section-label">WebUntis-Zugangsdaten</div>
+
+    {% if creds %}
+    <div class="widget" style="margin-bottom:16px">
+      <div class="widget-body">
+        <div class="creds-status">
+          <span class="creds-ok"><i data-lucide="check-circle"></i> Verbunden</span>
+          <span class="text-muted mono" style="font-size:0.75rem">{{ creds.wt_username }} @ {{ creds.server }}</span>
+        </div>
+        <p style="font-size:0.8rem;color:var(--text-muted);margin-top:8px">
+          Zugangsdaten gespeichert am {{ creds.gespeichert_am[:10] }}.
+          <a href="/mein-stundenplan" style="color:var(--accent)">Zum Stundenplan →</a>
+        </p>
+        <form method="POST" action="/profil/webuntis/loeschen" style="margin-top:12px">
+          <button type="submit" class="btn btn-danger btn-sm"
+            onclick="return confirm('WebUntis-Zugangsdaten wirklich löschen?')">
+            <i data-lucide="trash-2"></i> Zugangsdaten löschen
+          </button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    <!-- Sicherheitshinweis -->
+    <div class="warning-box">
+      <div class="warning-box-head">
+        <i data-lucide="shield-alert"></i>
+        <strong>Sicherheitshinweis – bitte lesen</strong>
+      </div>
+      <ul class="warning-list">
+        <li>Deine WebUntis-Zugangsdaten werden <strong>verschlüsselt</strong> auf diesem Server gespeichert.</li>
+        <li>Der Administrator dieses Servers hat technisch die Möglichkeit, gespeicherte Daten einzusehen. Speichere deine Daten nur, wenn du dem Administrator <strong>vertraust</strong>.</li>
+        <li>Ändere dein WebUntis-Passwort, musst du es auch <strong>hier aktualisieren</strong>.</li>
+        <li>Dieser Server ist nur für den Einsatz im <strong>internen Schulnetz</strong> gedacht.</li>
+      </ul>
+    </div>
+
+    <!-- Eingabeformular -->
+    <div class="widget" style="margin-top:16px">
+      <div class="widget-header">
+        <i data-lucide="{% if creds %}edit{% else %}plus-circle{% endif %}"></i>
+        <span>{% if creds %}Zugangsdaten aktualisieren{% else %}Zugangsdaten einrichten{% endif %}</span>
+      </div>
+      <div class="widget-body">
+        <form method="POST" action="/profil/webuntis/speichern" class="vform">
+          <label>WebUntis-Server
+            <input type="text" name="server"
+              value="{{ creds.server if creds else '' }}"
+              placeholder="z. B. mese.webuntis.com" required>
+          </label>
+          <label>Schulname (wie in der URL)
+            <input type="text" name="school"
+              value="{{ creds.school if creds else '' }}"
+              placeholder="z. B. bbs-musterstadt" required>
+          </label>
+          <label>WebUntis-Benutzername
+            <input type="text" name="wt_username"
+              value="{{ creds.wt_username if creds else '' }}"
+              autocomplete="off" required>
+          </label>
+          <label>WebUntis-Passwort
+            <input type="password" name="wt_password"
+              placeholder="{% if creds %}Leer lassen = unveränert{% else %}Passwort{% endif %}"
+              autocomplete="new-password" {% if not creds %}required{% endif %}>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" name="hinweis_bestaetigt" required>
+            <span>Ich habe den Sicherheitshinweis gelesen und verstanden.</span>
+          </label>
+          <button type="submit" class="btn btn-primary">
+            {% if creds %}Aktualisieren &amp; Verbindung testen{% else %}Speichern &amp; Verbindung testen{% endif %}
+          </button>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Passwort ändern -->
+  <div class="widget sidebar-form">
+    <div class="widget-header">
+      <i data-lucide="lock"></i>
+      <span>Server-Passwort ändern</span>
+    </div>
+    <div class="widget-body">
+      <form method="POST" action="/profil/passwort" class="vform">
+        <label>Aktuelles Passwort
+          <input type="password" name="current_password" autocomplete="current-password" required>
+        </label>
+        <label>Neues Passwort <span class="form-hint">(min. 6 Zeichen)</span>
+          <input type="password" name="new_password" autocomplete="new-password" required minlength="6">
+        </label>
+        <label>Neues Passwort bestätigen
+          <input type="password" name="new_password2" autocomplete="new-password" required minlength="6">
+        </label>
+        <button type="submit" class="btn btn-primary">Passwort speichern</button>
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Mein Stundenplan{% endblock %}
+{% block page_title %}Mein Stundenplan{% endblock %}
+
+{% block content %}
+
+{% if not configured %}
+<div class="empty-state">
+  <i data-lucide="calendar-x"></i>
+  <p>WebUntis-Zugangsdaten noch nicht eingerichtet.</p>
+  <a href="/profil" class="btn btn-primary" style="margin-top:8px">
+    <i data-lucide="settings"></i> Jetzt einrichten
+  </a>
+</div>
+
+{% elif fetch_error %}
+<div class="alert alert-error" style="margin-bottom:16px">
+  <strong>Stundenplan konnte nicht geladen werden:</strong> {{ fetch_error }}
+  &nbsp;–&nbsp;<a href="/profil" style="color:inherit;text-decoration:underline">Zugangsdaten prüfen</a>
+</div>
+
+{% else %}
+
+{% if fetch_warning %}
+<div class="alert alert-info" style="margin-bottom:16px">{{ fetch_warning }}</div>
+{% endif %}
+
+<div class="sp-topbar">
+  <span class="sp-week-label mono">
+    KW {{ monday.strftime('%V') }} &nbsp;·&nbsp;
+    {{ monday.strftime('%d.%m.') }} – {{ (monday + timedelta(4)).strftime('%d.%m.%Y') }}
+  </span>
+  <span class="sp-source">
+    <i data-lucide="zap"></i> Quelle: WebUntis
+  </span>
+  <form method="POST" action="/mein-stundenplan/aktualisieren">
+    <button type="submit" class="btn btn-sm" style="background:var(--surface2);color:var(--text-dim)">
+      <i data-lucide="refresh-cw"></i> Aktualisieren
+    </button>
+  </form>
+</div>
+
+<div class="table-scroll" style="margin-top:12px">
+  <table class="sp-table">
+    <thead>
+      <tr>
+        <th class="sp-num-col"></th>
+        {% for tag in wochentage %}
+        <th>{{ tag }}</th>
+        {% endfor %}
+      </tr>
+    </thead>
+    <tbody>
+      {% for p in periods_info %}
+      <tr>
+        <td class="sp-time">
+          <span class="sp-time-start">{{ p.start }}</span>
+          <span class="sp-time-end">{{ p.end }}</span>
+        </td>
+        {% for d in range(5) %}
+        {% set slot = grid[p.stunde][d] %}
+        <td class="sp-cell
+          {% if slot %}
+            {% if slot.cancelled %}sp-cell--cancelled{% else %}sp-cell--filled{% endif %}
+          {% endif %}">
+          {% if slot %}
+            {% if slot.cancelled %}
+            <div class="sp-fach sp-fach--cancelled">{{ slot.fach }}</div>
+            <div class="sp-sub sp-cancelled-badge">Entfällt</div>
+            {% else %}
+            <div class="sp-fach">{{ slot.fach }}</div>
+            {% if slot.raum %}<div class="sp-sub">{{ slot.raum }}</div>{% endif %}
+            {% if slot.lehrer %}<div class="sp-sub">{{ slot.lehrer }}</div>{% endif %}
+            {% endif %}
+          {% endif %}
+        </td>
+        {% endfor %}
+      </tr>
+      {% if p.pause_nach > 0 %}
+      <tr class="sp-pause-row">
+        <td class="sp-pause-cell" colspan="6">{{ p.pause_nach }} Min Pause</td>
+      </tr>
+      {% endif %}
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endif %}
+
+{% endblock %}

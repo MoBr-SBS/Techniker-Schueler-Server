@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Noten{% endblock %}
+{% block page_title %}Noten{% endblock %}
+
+{% block content %}
+<div class="page-cols">
+
+  <div class="noten-main">
+
+    {% if summaries %}
+
+    <div class="section-label">Fachübersicht</div>
+    <div class="noten-summary-grid">
+      {% for s in summaries %}
+      <div class="noten-summary-card accent-{{ s.color }}">
+        <div class="ns-fach">{{ s.fach }}</div>
+        <div class="ns-schnitt">Ø {{ "%.2f"|format(s.schnitt) }}</div>
+        <div class="ns-count">{{ s.count }} Note{% if s.count != 1 %}n{% endif %}</div>
+      </div>
+      {% endfor %}
+    </div>
+
+    {% for s in summaries %}
+    <div class="section-label mt-20">{{ s.fach }}</div>
+    <table class="noten-table">
+      <thead>
+        <tr>
+          <th>Datum</th>
+          <th>Note</th>
+          <th>Beschreibung</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for note in s.noten %}
+        <tr>
+          <td class="mono">{{ note.datum }}</td>
+          <td class="note-val note-col-{{ note.note|int }}">{{ note.note }}</td>
+          <td class="text-muted">{{ note.beschreibung or '–' }}</td>
+          <td>
+            <form method="POST" action="/noten/delete/{{ note.id }}" style="display:contents">
+              <button type="submit" class="icon-btn icon-btn--danger" title="Löschen">
+                <i data-lucide="trash-2"></i>
+              </button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+        <tr class="schnitt-row">
+          <td colspan="3" class="schnitt-label">Durchschnitt</td>
+          <td class="note-val">Ø {{ "%.2f"|format(s.schnitt) }}</td>
+        </tr>
+      </tbody>
+    </table>
+    {% endfor %}
+
+    {% else %}
+    <div class="empty-state">
+      <i data-lucide="award"></i>
+      <p>Noch keine Noten eingetragen.</p>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <div class="widget sidebar-form">
+    <div class="widget-header">
+      <i data-lucide="plus-circle"></i>
+      <span>Note eintragen</span>
+    </div>
+    <div class="widget-body">
+      <form method="POST" action="/noten/add" class="vform">
+        <label>Fach *
+          <input type="text" name="fach" placeholder="z. B. Mathematik"
+            list="fach-list" required>
+          <datalist id="fach-list">
+            {% for s in summaries %}
+            <option value="{{ s.fach }}">
+            {% endfor %}
+          </datalist>
+        </label>
+        <label>Note * (1–6)
+          <input type="text" name="note" placeholder="z. B. 2,5" required
+            inputmode="decimal">
+        </label>
+        <label>Datum *
+          <input type="date" name="datum" value="{{ today }}" required>
+        </label>
+        <label>Beschreibung
+          <input type="text" name="beschreibung" placeholder="z. B. Mathearbeit">
+        </label>
+        <button type="submit" class="btn btn-primary">Eintragen</button>
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

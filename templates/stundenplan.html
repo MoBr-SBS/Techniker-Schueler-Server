@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Stundenplan{% endblock %}
+{% block page_title %}Stundenplan{% endblock %}
+
+{% block content %}
+<div class="page-cols">
+
+  <div class="sp-wrap">
+    <div class="table-scroll">
+      <table class="sp-table">
+        <thead>
+          <tr>
+            <th class="sp-num-col"></th>
+            {% for tag in wochentage %}
+            <th>{{ tag }}</th>
+            {% endfor %}
+          </tr>
+        </thead>
+        <tbody>
+          {% for stunde in stunden %}
+          <tr>
+            <td class="sp-num">{{ stunde }}</td>
+            {% for d in range(5) %}
+            {% set slot = grid[stunde][d] %}
+            <td class="sp-cell {% if slot %}sp-cell--filled{% endif %}">
+              {% if slot %}
+              <div class="sp-fach">{{ slot.fach }}</div>
+              {% if slot.raum %}<div class="sp-sub">{{ slot.raum }}</div>{% endif %}
+              {% if slot.lehrer %}<div class="sp-sub">{{ slot.lehrer }}</div>{% endif %}
+              <form method="POST" action="/stundenplan/delete/{{ slot.id }}" style="display:contents">
+                <button type="submit" class="sp-del" title="Löschen">
+                  <i data-lucide="x"></i>
+                </button>
+              </form>
+              {% endif %}
+            </td>
+            {% endfor %}
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="widget sidebar-form">
+    <div class="widget-header">
+      <i data-lucide="plus-circle"></i>
+      <span>Eintrag hinzufügen</span>
+    </div>
+    <div class="widget-body">
+      <form method="POST" action="/stundenplan/add" class="vform">
+        <label>Tag
+          <select name="wochentag">
+            {% for tag in wochentage %}
+            <option value="{{ loop.index0 }}">{{ tag }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>Stunde
+          <select name="stunde">
+            {% for s in stunden %}
+            <option value="{{ s }}">{{ s }}. Stunde</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label>Fach *
+          <input type="text" name="fach" placeholder="z. B. Mathematik" required>
+        </label>
+        <label>Raum
+          <input type="text" name="raum" placeholder="z. B. 204">
+        </label>
+        <label>Lehrer/in
+          <input type="text" name="lehrer" placeholder="z. B. Hr. Müller">
+        </label>
+        <button type="submit" class="btn btn-primary">Eintragen</button>
+      </form>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

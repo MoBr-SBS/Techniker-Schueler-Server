@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-grid">
+
+  {% for s in stats %}
+  <div class="stat-card accent-{{ s.color }}">
+    <div class="stat-icon"><i data-lucide="{{ s.icon }}"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ s.value }}</div>
+      <div class="stat-label">{{ s.label }}</div>
+    </div>
+  </div>
+  {% endfor %}
+
+  <div class="widget span-2">
+    <div class="widget-header">
+      <i data-lucide="activity"></i>
+      <span>Aktivitätsverlauf</span>
+    </div>
+    <div class="widget-body placeholder-chart">
+      <div class="chart-bars">
+        {% for h in [40, 65, 30, 80, 55, 90, 45, 70, 60, 85, 50, 75] %}
+        <div class="bar" style="--h: {{ h }}%"></div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="widget">
+    <div class="widget-header">
+      <i data-lucide="info"></i>
+      <span>Systeminformationen</span>
+    </div>
+    <div class="widget-body info-list">
+      <div class="info-row"><span>Hostname</span><span class="mono">myserver.local</span></div>
+      <div class="info-row"><span>Python</span><span class="mono">3.12</span></div>
+      <div class="info-row"><span>Flask</span><span class="mono">3.x</span></div>
+      <div class="info-row"><span>Port</span><span class="mono">8080</span></div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
