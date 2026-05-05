@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% block title %}Notiz – {{ fach }}{% endblock %}
+{% block page_title %}Prüfungsnotiz{% endblock %}
+
+{% block content %}
+
+<!-- Zurück-Link -->
+<a href="{{ url_for('pruefungen.index') }}"
+   style="display:inline-flex;align-items:center;gap:6px;font-size:0.82rem;color:var(--text-dim);
+          text-decoration:none;margin-bottom:20px">
+  <i data-lucide="arrow-left" style="width:14px;height:14px"></i> Zurück zu Prüfungen
+</a>
+
+<!-- Prüfungs-Header -->
+<div class="widget" style="margin-bottom:16px">
+  <div class="widget-body" style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+    <div>
+      <div style="font-size:1.1rem;font-weight:700">{{ fach }}
+        {% if name %}<span class="text-muted" style="font-weight:400;font-size:0.9rem"> · {{ name }}</span>{% endif %}
+      </div>
+      {% if datum_str %}
+      <div style="font-size:0.8rem;color:var(--text-muted);margin-top:2px">
+        <i data-lucide="calendar" style="width:12px;height:12px"></i> {{ datum_str }}
+      </div>
+      {% endif %}
+    </div>
+    {% if art %}
+    <span class="pruef-art-badge pruef-art--{{ art | lower | replace('schulaufgabe','sa') }}"
+          style="margin-left:auto">{{ art }}</span>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Notiz-Bereich -->
+<div class="widget">
+  <div class="widget-header">
+    <i data-lucide="book-open"></i>
+    <span>Gemeinsame Notiz</span>
+    {% if note and note.updated_by %}
+    <span style="margin-left:auto;font-size:0.72rem;color:var(--text-muted);font-weight:400">
+      Zuletzt bearbeitet von <strong>{{ note.updated_by }}</strong>
+      am {{ note.updated_at[:10] }}
+    </span>
+    {% endif %}
+  </div>
+  <div class="widget-body">
+
+    {% if edit %}
+    <!-- ── Bearbeitungs-Modus ── -->
+    <form method="POST"
+          action="{{ url_for('pruefungen.notiz_speichern', exam_key=exam_key) }}"
+          id="note-form">
+      <input type="hidden" name="fach"      value="{{ fach }}">
+      <input type="hidden" name="name"      value="{{ name }}">
+      <input type="hidden" name="art"       value="{{ art }}">
+      <input type="hidden" name="datum_str" value="{{ datum_str }}">
+
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <button type="button" id="btn-preview" class="btn btn-sm"
+                style="background:var(--surface2);color:var(--text-dim)">
+          <i data-lucide="eye"></i> Vorschau
+        </button>
+        <button type="button" id="btn-edit-tab" class="btn btn-sm btn-primary" style="display:none">
+          <i data-lucide="pencil"></i> Bearbeiten
+        </button>
+      </div>
+
+      <textarea id="note-textarea" name="content" rows="18"
+                style="width:100%;font-family:var(--font-mono);font-size:0.85rem;
+                       background:var(--surface2);border:1px solid var(--border);
+                       border-radius:var(--radius-sm);padding:12px;color:var(--text);
+                       resize:vertical;line-height:1.6;box-sizing:border-box"
+                placeholder="Markdown wird unterstützt – z. B. **fett**, # Überschrift, - Liste …">{{ note.content if note else '' }}</textarea>
+
+      <div id="note-preview" class="md-preview" style="display:none;
+           min-height:200px;padding:12px;background:var(--surface2);
+           border:1px solid var(--border);border-radius:var(--radius-sm)"></div>
+
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button type="submit" class="btn btn-primary">
+          <i data-lucide="save"></i> Speichern
+        </button>
+        <a href="{{ url_for('pruefungen.notiz', exam_key=exam_key,
+                    fach=fach, name=name, art=art, datum_str=datum_str) }}"
+           class="btn btn-sm" style="background:var(--surface2);color:var(--text-dim)">
+          Abbrechen
+        </a>
+      </div>
+    </form>
+
+    {% else %}
+    <!-- ── Lese-Modus ── -->
+    {% if note and note.content %}
+    <div class="md-preview" id="note-rendered">{{ note.content }}</div>
+    {% else %}
+    <div class="empty-state" style="margin:24px 0">
+      <i data-lucide="file-text"></i>
+      <p>Noch keine Notiz vorhanden.</p>
+    </div>
+    {% endif %}
+
+    <div style="margin-top:16px">
+      <a href="{{ url_for('pruefungen.notiz', exam_key=exam_key,
+                  fach=fach, name=name, art=art, datum_str=datum_str, edit=1) }}"
+         class="btn btn-primary">
+        <i data-lucide="pencil"></i>
+        {% if note and note.content %}Bearbeiten{% else %}Notiz anlegen{% endif %}
+      </a>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+  // Lese-Modus: Markdown rendern
+  const rendered = document.getElementById('note-rendered');
+  if (rendered) {
+    rendered.innerHTML = marked.parse(rendered.textContent);
+  }
+
+  // Bearbeitungs-Modus: Vorschau-Toggle
+  const textarea  = document.getElementById('note-textarea');
+  const preview   = document.getElementById('note-preview');
+  const btnPrev   = document.getElementById('btn-preview');
+  const btnEdit   = document.getElementById('btn-edit-tab');
+
+  if (btnPrev) {
+    btnPrev.addEventListener('click', () => {
+      preview.innerHTML = marked.parse(textarea.value);
+      textarea.style.display = 'none';
+      preview.style.display  = 'block';
+      btnPrev.style.display  = 'none';
+      btnEdit.style.display  = '';
+    });
+    btnEdit.addEventListener('click', () => {
+      preview.style.display  = 'none';
+      textarea.style.display = '';
+      btnEdit.style.display  = 'none';
+      btnPrev.style.display  = '';
+    });
+  }
+</script>
+{% endblock %}

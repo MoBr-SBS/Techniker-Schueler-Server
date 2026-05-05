@@ -1,0 +1,7 @@
+.env
+school.db
+__pycache__/
+*.py[cod]
+.venv/
+.idea/
+*.iml

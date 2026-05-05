@@ -138,6 +138,9 @@ a { text-decoration: none; color: inherit; }
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.4; }
 }
+@keyframes sp-spin {
+  to { transform: rotate(360deg); }
+}
 
 /* ── Main area ──────────────────────────────────────────────────────────── */
 .main {
@@ -933,8 +936,11 @@ body.login-body {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  cursor: default;
+  cursor: pointer;
+  text-decoration: none;
+  transition: filter var(--transition);
 }
+a.sp-exam-badge:hover { filter: brightness(1.15); }
 .sp-exam-badge--sa {
   background: rgba(247, 95, 95, 0.12);
   border: 1px solid rgba(247, 95, 95, 0.3);
@@ -962,10 +968,87 @@ body.login-body {
   font-size: 0.6rem;
   font-weight: 700;
   letter-spacing: 0.03em;
+  text-decoration: none;
+  cursor: pointer;
+  transition: filter var(--transition);
 }
+a.sp-pruef-pill:hover { filter: brightness(1.2); }
 .sp-pruef-pill--sa { background: rgba(247,95,95,0.15); color: var(--red); }
 .sp-pruef-pill--ex { background: rgba(79,142,247,0.15); color: var(--blue); }
+.sp-pruef-pill--manual { background: rgba(61,214,140,0.15); color: var(--green); border: 1px solid rgba(61,214,140,0.3); }
 .sp-pruef-pill i { width: 10px; height: 10px; }
+
+/* ── Ex-Button & Inline-Formular in Zelle ───────────────────────────────── */
+.sp-ex-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+.sp-ex-del {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition), background var(--transition);
+}
+.sp-ex-del:hover { color: var(--red); background: rgba(247,95,95,0.12); }
+.sp-ex-del i { width: 11px; height: 11px; }
+
+.sp-edit-toggle--active {
+  background: rgba(61,214,140,0.15) !important;
+  color: var(--green) !important;
+  border: 1px solid rgba(61,214,140,0.3) !important;
+}
+
+.sp-ex-btn {
+  display: none;
+  align-items: center;
+  gap: 3px;
+  margin-top: 5px;
+  background: rgba(61,214,140,0.1);
+  border: 1px dashed rgba(61,214,140,0.3);
+  border-radius: var(--radius-sm);
+  color: var(--green);
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition);
+  font-family: var(--font-ui);
+}
+.sp-edit-mode .sp-ex-btn { display: inline-flex; }
+.sp-ex-btn:hover { background: rgba(61,214,140,0.18); border-color: rgba(61,214,140,0.5); }
+.sp-ex-btn i { width: 9px; height: 9px; }
+
+.sp-exam-badge--manual {
+  background: rgba(61,214,140,0.12) !important;
+  color: var(--green) !important;
+  border-color: rgba(61,214,140,0.3) !important;
+}
+
+.sp-ex-form { display: none; margin-top: 6px; }
+.sp-ex-form--open { display: block; }
+.sp-ex-notiz {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 4px 7px;
+  font-size: 0.78rem;
+  font-family: var(--font-ui);
+  outline: none;
+  transition: border-color var(--transition);
+  margin-bottom: 5px;
+}
+.sp-ex-notiz:focus { border-color: var(--green); }
+.sp-ex-actions { display: flex; gap: 5px; }
+.sp-ex-actions .btn { padding: 4px 8px; font-size: 0.75rem; }
 
 .sp-cell--cancelled { background: rgba(247,95,95,0.06) !important; }
 
@@ -1107,6 +1190,121 @@ body.login-body {
   border: 1px solid rgba(79, 142, 247, 0.3);
 }
 
+.pruef-item--manual {
+  border-left: 3px solid var(--green);
+}
+
+/* ── Prüfungen: Inline-Notiz-Edit ───────────────────────────────────────── */
+.pruef-notiz-form {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+.pruef-notiz-form--open { display: flex; }
+.pruef-notiz-form input {
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 5px 8px;
+  font-size: 0.82rem;
+  font-family: var(--font-ui);
+  outline: none;
+  flex: 1;
+  min-width: 0;
+  transition: border-color var(--transition);
+}
+.pruef-notiz-form input:focus { border-color: var(--accent); }
+
+.pruef-source-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 99px;
+  flex-shrink: 0;
+}
+.pruef-source-badge i { width: 9px; height: 9px; }
+.pruef-source-badge--manual {
+  background: rgba(61, 214, 140, 0.12);
+  color: var(--green);
+  border: 1px solid rgba(61, 214, 140, 0.25);
+}
+.pruef-source-badge--untis {
+  background: rgba(79, 142, 247, 0.1);
+  color: var(--blue);
+  border: 1px solid rgba(79, 142, 247, 0.2);
+}
+
+/* ── Prüfung-Eintragen-Formular ─────────────────────────────────────────── */
+.pruef-form-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  margin-bottom: 20px;
+}
+.pruef-form-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+.pruef-form-title i { width: 13px; height: 13px; }
+.pruef-form-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+}
+.pruef-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+  min-width: 140px;
+}
+.pruef-form-field--sm { flex: 0 0 90px; min-width: 80px; }
+.pruef-form-field label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.pruef-form-field input,
+.pruef-form-field select {
+  background: var(--bg);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  padding: 7px 10px;
+  font-size: 0.85rem;
+  font-family: var(--font-ui);
+  outline: none;
+  transition: border-color var(--transition);
+  width: 100%;
+}
+.pruef-form-field input:focus,
+.pruef-form-field select:focus { border-color: var(--accent); }
+.pruef-form-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+  padding-bottom: 1px;
+}
+
 .btn-icon-del {
   background: none;
   border: none;
@@ -1120,6 +1318,50 @@ body.login-body {
 }
 .btn-icon-del:hover { color: var(--red); background: rgba(247,95,95,0.1); }
 .btn-icon-del i { width: 14px; height: 14px; }
+
+/* ── Markdown-Vorschau ───────────────────────────────────────────────────── */
+.md-preview { line-height: 1.7; font-size: 0.9rem; color: var(--text); }
+.md-preview h1, .md-preview h2, .md-preview h3 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  margin: 1.2em 0 0.4em;
+  color: var(--text);
+}
+.md-preview h1 { font-size: 1.3rem; }
+.md-preview h2 { font-size: 1.1rem; }
+.md-preview h3 { font-size: 0.95rem; }
+.md-preview p  { margin: 0.6em 0; }
+.md-preview ul, .md-preview ol { padding-left: 1.4em; margin: 0.5em 0; }
+.md-preview li { margin: 0.2em 0; }
+.md-preview strong { color: var(--text); font-weight: 700; }
+.md-preview em { font-style: italic; color: var(--text-dim); }
+.md-preview code {
+  font-family: var(--font-mono);
+  font-size: 0.82em;
+  background: var(--surface3, var(--surface2));
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+.md-preview pre {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  overflow-x: auto;
+}
+.md-preview pre code { background: none; padding: 0; }
+.md-preview blockquote {
+  border-left: 3px solid var(--accent);
+  margin: 0.8em 0;
+  padding: 4px 12px;
+  color: var(--text-dim);
+}
+.md-preview hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.2em 0;
+}
+.md-preview a { color: var(--accent); }
 
 .sp-fach--cancelled {
   text-decoration: line-through;

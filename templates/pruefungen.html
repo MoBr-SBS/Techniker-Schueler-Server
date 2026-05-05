@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}Prüfungen{% endblock %}
+{% block page_title %}Prüfungen{% endblock %}
+
+{% block content %}
+
+{# ── Topbar ────────────────────────────────────────────────────────────────── #}
+<div class="pruef-topbar">
+  <a href="/mein-stundenplan" class="btn btn-sm" style="background:var(--surface2);color:var(--text-dim);margin-right:auto">
+    <i data-lucide="plus-circle"></i> Ex eintragen
+  </a>
+  {% if wt_configured %}
+  <form method="POST" action="/pruefungen/aktualisieren">
+    <button type="submit" class="btn btn-sm" style="background:var(--surface2);color:var(--text-dim)">
+      <i data-lucide="refresh-cw"></i> Aktualisieren
+    </button>
+  </form>
+  {% else %}
+  <a href="/profil" class="btn btn-sm" style="background:var(--surface2);color:var(--text-dim)">
+    <i data-lucide="settings"></i> WebUntis einrichten
+  </a>
+  {% endif %}
+</div>
+
+{# ── Warnungen ─────────────────────────────────────────────────────────────── #}
+{% if wt_error %}
+<div class="alert alert-error" style="margin-bottom:16px">
+  <strong>WebUntis nicht erreichbar:</strong> {{ wt_error }}
+  &nbsp;–&nbsp;<a href="/profil" style="color:inherit;text-decoration:underline">Zugangsdaten prüfen</a>
+</div>
+{% elif warning %}
+<div class="alert alert-info" style="margin-bottom:16px">{{ warning }}</div>
+{% endif %}
+
+{# ── Bevorstehende Prüfungen ───────────────────────────────────────────────── #}
+{% if upcoming %}
+<div class="section-label">Bevorstehende Prüfungen</div>
+<div class="pruef-list">
+  {% for exam in upcoming %}
+  <div class="pruef-item{% if exam.heute %} pruef-item--heute{% endif %}{% if exam.source == 'manual' %} pruef-item--manual{% endif %}">
+
+    <div class="pruef-date">
+      <span class="pruef-wd">{{ exam.wochentag }}</span>
+      <span class="pruef-day">{{ exam.datum.strftime('%d.%m.') }}</span>
+    </div>
+
+    <div class="pruef-main">
+      <div class="pruef-fach">
+        {{ exam.fach }}
+        {% if exam.heute %}<span class="pruef-heute-badge">Heute</span>{% endif %}
+        <span class="pruef-art-badge pruef-art--{{ exam.art | lower | replace('schulaufgabe','sa') }}">
+          {{ exam.art | replace('Schulaufgabe', 'SA') }}
+        </span>
+        {% if exam.source == 'manual' %}
+        <span class="pruef-source-badge pruef-source-badge--manual"><i data-lucide="pencil"></i> Manuell</span>
+        {% else %}
+        <span class="pruef-source-badge pruef-source-badge--untis"><i data-lucide="zap"></i> Untis</span>
+        {% endif %}
+        {% if exam.get('name') %}<span class="text-muted" style="font-size:0.82rem;font-weight:400">{{ exam.name }}</span>{% endif %}
+      </div>
+
+      {% if exam.source == 'manual' and exam.notiz %}
+      <div class="pruef-meta"><span><i data-lucide="file-text"></i> {{ exam.notiz }}</span></div>
+      {% elif exam.source == 'webuntis' and (exam.get('start') or exam.get('rooms') or exam.get('teachers')) %}
+      <div class="pruef-meta">
+        {% if exam.start %}<span class="mono"><i data-lucide="clock"></i> {{ exam.start }}{% if exam.end %} – {{ exam.end }}{% endif %}</span>{% endif %}
+        {% if exam.rooms %}<span><i data-lucide="map-pin"></i> {{ exam.rooms | join(', ') }}</span>{% endif %}
+        {% if exam.teachers %}<span><i data-lucide="user"></i> {{ exam.teachers | join(', ') }}</span>{% endif %}
+      </div>
+      {% endif %}
+    </div>
+
+    <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-shrink:0">
+      <span class="pruef-countdown">
+        {% if exam.heute %}–{% elif exam.days == 1 %}Morgen{% else %}in {{ exam.days }} Tagen{% endif %}
+      </span>
+
+      {% if exam.source == 'manual' %}
+      <form method="POST" action="/pruefungen/manuell/{{ exam.id }}/loeschen"
+            style="display:inline" onsubmit="return confirm('Eintrag löschen?')">
+        <button type="submit" class="btn-icon-del" title="Löschen"><i data-lucide="trash-2"></i></button>
+      </form>
+      {% endif %}
+
+      <a href="{{ url_for('pruefungen.notiz', exam_key=exam.exam_key,
+                  fach=exam.fach, name=exam.get('name',''), art=exam.art,
+                  datum_str=exam.datum.strftime('%d.%m.%Y')) }}"
+         class="btn btn-sm {% if exam.has_note %}btn-primary{% endif %}"
+         style="{% if not exam.has_note %}background:var(--surface2);color:var(--text-dim);{% endif %}"
+         title="{% if exam.has_note %}Notiz ansehen{% else %}Notiz anlegen{% endif %}">
+        <i data-lucide="{% if exam.has_note %}book-open{% else %}file-plus{% endif %}"></i>
+      </a>
+    </div>
+
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state" style="margin-top:32px">
+  <i data-lucide="calendar-check"></i>
+  <p>Keine bevorstehenden Prüfungen.</p>
+</div>
+{% endif %}
+
+{# ── Vergangene Prüfungen ──────────────────────────────────────────────────── #}
+{% if past %}
+<div class="section-label mt-20">Vergangene Prüfungen</div>
+<div class="pruef-list">
+  {% for exam in past %}
+  <div class="pruef-item pruef-item--past{% if exam.source == 'manual' %} pruef-item--manual{% endif %}">
+
+    <div class="pruef-date">
+      <span class="pruef-wd">{{ exam.wochentag }}</span>
+      <span class="pruef-day">{{ exam.datum.strftime('%d.%m.') }}</span>
+    </div>
+
+    <div class="pruef-main">
+      <div class="pruef-fach">
+        {{ exam.fach }}
+        <span class="pruef-art-badge pruef-art--{{ exam.art | lower | replace('schulaufgabe','sa') }}">
+          {{ exam.art | replace('Schulaufgabe', 'SA') }}
+        </span>
+        {% if exam.source == 'manual' %}
+        <span class="pruef-source-badge pruef-source-badge--manual"><i data-lucide="pencil"></i> Manuell</span>
+        {% else %}
+        <span class="pruef-source-badge pruef-source-badge--untis"><i data-lucide="zap"></i> Untis</span>
+        {% endif %}
+        {% if exam.get('name') %}<span class="text-muted" style="font-size:0.82rem;font-weight:400">{{ exam.name }}</span>{% endif %}
+      </div>
+      {% if exam.source == 'manual' and exam.notiz %}
+      <div class="pruef-meta"><span><i data-lucide="file-text"></i> {{ exam.notiz }}</span></div>
+      {% elif exam.source == 'webuntis' and (exam.get('start') or exam.get('rooms')) %}
+      <div class="pruef-meta">
+        {% if exam.start %}<span class="mono"><i data-lucide="clock"></i> {{ exam.start }}{% if exam.end %} – {{ exam.end }}{% endif %}</span>{% endif %}
+        {% if exam.rooms %}<span><i data-lucide="map-pin"></i> {{ exam.rooms | join(', ') }}</span>{% endif %}
+      </div>
+      {% endif %}
+    </div>
+
+    <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-shrink:0">
+      {% if exam.source == 'manual' %}
+      <form method="POST" action="/pruefungen/manuell/{{ exam.id }}/loeschen"
+            style="display:inline" onsubmit="return confirm('Eintrag löschen?')">
+        <button type="submit" class="btn-icon-del" title="Löschen"><i data-lucide="trash-2"></i></button>
+      </form>
+      {% endif %}
+      {% if exam.has_note %}
+      <a href="{{ url_for('pruefungen.notiz', exam_key=exam.exam_key,
+                  fach=exam.fach, name=exam.get('name',''), art=exam.art,
+                  datum_str=exam.datum.strftime('%d.%m.%Y')) }}"
+         class="btn btn-sm" style="background:var(--surface2);color:var(--text-dim)" title="Notiz ansehen">
+        <i data-lucide="book-open"></i>
+      </a>
+      {% endif %}
+    </div>
+
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% endblock %}

@@ -22,8 +22,6 @@ def create_app(config: Config = None) -> Flask:
     from routes.dashboard        import bp as dashboard_bp
     from routes.stats            import bp as stats_bp
     from routes.settings         import bp as settings_bp
-    from routes.stundenplan      import bp as stundenplan_bp
-    from routes.tests            import bp as tests_bp
     from routes.noten            import bp as noten_bp
     from routes.auth             import bp as auth_bp
     from routes.admin            import bp as admin_bp
@@ -31,8 +29,8 @@ def create_app(config: Config = None) -> Flask:
     from routes.mein_stundenplan import bp as mein_stundenplan_bp
     from routes.pruefungen       import bp as pruefungen_bp
 
-    for bp in (dashboard_bp, stats_bp, settings_bp, stundenplan_bp,
-               tests_bp, noten_bp, auth_bp, admin_bp, profil_bp,
+    for bp in (dashboard_bp, stats_bp, settings_bp,
+               noten_bp, auth_bp, admin_bp, profil_bp,
                mein_stundenplan_bp, pruefungen_bp):
         app.register_blueprint(bp)
 

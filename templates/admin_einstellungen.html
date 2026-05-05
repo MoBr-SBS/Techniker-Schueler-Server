@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Admin-Einstellungen{% endblock %}
+{% block page_title %}Admin-Einstellungen{% endblock %}
+
+{% block content %}
+<div class="page-cols">
+
+  <div>
+    <div class="section-label">WebUntis-Konfiguration</div>
+    <div class="widget" style="margin-bottom:16px">
+      <div class="widget-body">
+        <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:16px">
+          Diese Einstellungen gelten für alle Benutzer. Jeder Nutzer gibt anschließend
+          nur noch seinen persönlichen WebUntis-Benutzernamen und sein Passwort ein.
+        </p>
+
+        {% if wu_server and wu_school %}
+        <div class="creds-status" style="margin-bottom:16px">
+          <span class="creds-ok"><i data-lucide="check-circle"></i> Konfiguriert</span>
+          <span class="text-muted mono" style="font-size:0.75rem">{{ wu_server }} / {{ wu_school }}</span>
+        </div>
+        {% else %}
+        <div class="alert alert-info" style="margin-bottom:16px">
+          <i data-lucide="info"></i> Noch nicht konfiguriert – Benutzer können sich noch nicht mit WebUntis verbinden.
+        </div>
+        {% endif %}
+
+        <form method="POST" action="/admin/einstellungen/webuntis" class="vform">
+          <label>WebUntis-Server
+            <input type="text" name="wu_server"
+              value="{{ wu_server }}"
+              placeholder="z. B. sbs-herzogenaurach.webuntis.com"
+              required>
+            <span class="form-hint">Hostname ohne https://</span>
+          </label>
+          <label>Schulname (wie in der URL)
+            <input type="text" name="wu_school"
+              value="{{ wu_school }}"
+              placeholder="z. B. sbs-herzogenaurach"
+              required>
+            <span class="form-hint">Entspricht dem <code>?school=</code>-Parameter der API</span>
+          </label>
+          <button type="submit" class="btn btn-primary">
+            <i data-lucide="save"></i> Speichern
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div class="section-label mt-20">Schnellzugriff</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <a href="/admin/benutzer" class="btn btn-sm" style="background:var(--surface2);color:var(--text-dim)">
+        <i data-lucide="users"></i> Benutzerverwaltung
+      </a>
+    </div>
+  </div>
+
+  <div style="max-width:320px">
+    <div class="widget sidebar-form">
+      <div class="widget-header">
+        <i data-lucide="info"></i>
+        <span>Hinweise</span>
+      </div>
+      <div class="widget-body" style="font-size:0.82rem;color:var(--text-muted);line-height:1.6">
+        <p>Der <strong>Server</strong> ist der Hostname des WebUntis-Systems deiner Schule.</p>
+        <p style="margin-top:8px">Der <strong>Schulname</strong> findet sich in der WebUntis-URL deiner Schule direkt nach <code>?school=</code>.</p>
+        <p style="margin-top:8px">Nach einer Änderung werden alle Caches geleert. Benutzer müssen ihre Zugangsdaten erneut testen, falls sich der Server geändert hat.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

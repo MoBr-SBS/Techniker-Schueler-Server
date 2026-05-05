@@ -172,7 +172,7 @@ def delete_user(user_id):
     db.commit()
 
 
-# ── Prüfungen ─────────────────────────────────────────────────────────────────
+# ── Prüfungen (manuell) ───────────────────────────────────────────────────────
 
 def get_all_pruefungen():
     return get_db().execute(
@@ -180,11 +180,26 @@ def get_all_pruefungen():
     ).fetchall()
 
 
-def add_pruefung(fach, art, datum):
+def get_pruefung(pruefung_id):
+    return get_db().execute(
+        "SELECT * FROM pruefungen WHERE id=?", (pruefung_id,)
+    ).fetchone()
+
+
+def add_pruefung(fach, art, datum, notiz=""):
     db = get_db()
     db.execute(
-        "INSERT INTO pruefungen (fach, art, datum) VALUES (?,?,?)",
-        (fach, art, datum),
+        "INSERT INTO pruefungen (fach, art, datum, notiz) VALUES (?,?,?,?)",
+        (fach, art, datum, notiz),
+    )
+    db.commit()
+
+
+def update_pruefung(pruefung_id, fach, art, datum, notiz=""):
+    db = get_db()
+    db.execute(
+        "UPDATE pruefungen SET fach=?, art=?, datum=?, notiz=? WHERE id=?",
+        (fach, art, datum, notiz, pruefung_id),
     )
     db.commit()
 
@@ -195,6 +210,20 @@ def delete_pruefung(pruefung_id):
     db.commit()
 
 
+def get_stundenplan_faecher():
+    rows = get_db().execute(
+        "SELECT DISTINCT fach FROM stundenplan ORDER BY fach"
+    ).fetchall()
+    return [row["fach"] for row in rows]
+
+
+def get_pruefungen_for_week(start, end):
+    return get_db().execute(
+        "SELECT * FROM pruefungen WHERE datum >= ? AND datum <= ? ORDER BY datum",
+        (start.isoformat(), end.isoformat()),
+    ).fetchall()
+
+
 # ── WebUntis-Zugangsdaten ─────────────────────────────────────────────────────
 
 def get_webuntis_credentials(user_id):
@@ -203,18 +232,16 @@ def get_webuntis_credentials(user_id):
     ).fetchone()
 
 
-def save_webuntis_credentials(user_id, server, school, wt_username, wt_password):
+def save_webuntis_credentials(user_id, wt_username, wt_password):
     db = get_db()
     db.execute(
         """INSERT INTO webuntis_credentials (user_id, server, school, wt_username, wt_password)
            VALUES (?,?,?,?,?)
            ON CONFLICT(user_id) DO UPDATE SET
-               server=excluded.server,
-               school=excluded.school,
                wt_username=excluded.wt_username,
                wt_password=excluded.wt_password,
                gespeichert_am=datetime('now')""",
-        (user_id, server, school, wt_username, wt_password),
+        (user_id, "", "", wt_username, wt_password),
     )
     db.commit()
 
@@ -223,3 +250,70 @@ def delete_webuntis_credentials(user_id):
     db = get_db()
     db.execute("DELETE FROM webuntis_credentials WHERE user_id=?", (user_id,))
     db.commit()
+
+
+# ── Prüfungs-Hilfsfunktionen ──────────────────────────────────────────────────
+
+import re as _re
+import datetime as _dt
+
+
+def make_exam_key(fach: str, datum: _dt.date) -> str:
+    safe = _re.sub(r"[^A-Za-z0-9]", "_", fach).strip("_") or "unbekannt"
+    return f"{safe}_{datum.strftime('%Y%m%d')}"
+
+
+# ── Prüfungsnotizen ───────────────────────────────────────────────────────────
+
+def get_exam_note(exam_key: str):
+    return get_db().execute(
+        "SELECT * FROM exam_notes WHERE exam_key=?", (exam_key,)
+    ).fetchone()
+
+
+def save_exam_note(exam_key: str, content: str, username: str):
+    db = get_db()
+    db.execute(
+        """INSERT INTO exam_notes (exam_key, content, updated_at, updated_by)
+           VALUES (?,?,datetime('now'),?)
+           ON CONFLICT(exam_key) DO UPDATE SET
+               content=excluded.content,
+               updated_at=datetime('now'),
+               updated_by=excluded.updated_by""",
+        (exam_key, content, username),
+    )
+    db.commit()
+
+
+def get_exam_note_keys() -> set:
+    rows = get_db().execute(
+        "SELECT exam_key FROM exam_notes WHERE content != ''"
+    ).fetchall()
+    return {row["exam_key"] for row in rows}
+
+
+# ── App-Einstellungen (global, Admin) ─────────────────────────────────────────
+
+def get_app_setting(key: str, default: str = "") -> str:
+    row = get_db().execute(
+        "SELECT value FROM app_settings WHERE key=?", (key,)
+    ).fetchone()
+    return row["value"] if row else default
+
+
+def set_app_setting(key: str, value: str):
+    db = get_db()
+    db.execute(
+        "INSERT INTO app_settings (key, value) VALUES (?,?) "
+        "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+        (key, value),
+    )
+    db.commit()
+
+
+def get_webuntis_config() -> tuple[str, str]:
+    """Gibt (server, school) aus den globalen Einstellungen zurück."""
+    return (
+        get_app_setting("webuntis_server"),
+        get_app_setting("webuntis_school"),
+    )

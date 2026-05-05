@@ -3,115 +3,96 @@
 {% block page_title %}Mein Stundenplan{% endblock %}
 
 {% block content %}
-
-{% if not configured %}
-<div class="empty-state">
-  <i data-lucide="calendar-x"></i>
-  <p>WebUntis-Zugangsdaten noch nicht eingerichtet.</p>
-  <a href="/profil" class="btn btn-primary" style="margin-top:8px">
-    <i data-lucide="settings"></i> Jetzt einrichten
-  </a>
+<div id="sp-content">
+  {% include "mein_stundenplan_content.html" %}
 </div>
 
-{% elif fetch_error %}
-<div class="alert alert-error" style="margin-bottom:16px">
-  <strong>Stundenplan konnte nicht geladen werden:</strong> {{ fetch_error }}
-  &nbsp;–&nbsp;<a href="/profil" style="color:inherit;text-decoration:underline">Zugangsdaten prüfen</a>
-</div>
+<script>
+(function () {
+  var content  = document.getElementById('sp-content');
+  var editMode = false;
 
-{% else %}
+  function applyEditMode() {
+    var wrap = content.querySelector('#sp-table-wrap');
+    var btn  = content.querySelector('#sp-edit-toggle');
+    if (wrap) wrap.classList.toggle('sp-edit-mode', editMode);
+    if (btn)  btn.classList.toggle('sp-edit-toggle--active', editMode);
+  }
 
-{% if fetch_warning %}
-<div class="alert alert-info" style="margin-bottom:16px">{{ fetch_warning }}</div>
-{% endif %}
+  function attachExForms() {
+    content.querySelectorAll('.sp-ex-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var form = document.getElementById(btn.dataset.form);
+        if (!form) return;
+        var open = form.classList.toggle('sp-ex-form--open');
+        if (open) form.querySelector('.sp-ex-notiz').focus();
+      });
+    });
+    content.querySelectorAll('.sp-ex-cancel').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var form = document.getElementById(btn.dataset.form);
+        if (form) form.classList.remove('sp-ex-form--open');
+      });
+    });
+  }
 
-<div class="sp-topbar">
-  <div class="sp-week-nav">
-    <a href="/mein-stundenplan?woche={{ prev_monday.isoformat() }}" class="btn btn-sm" title="Vorherige Woche">
-      <i data-lucide="chevron-left"></i>
-    </a>
-    <span class="sp-week-label mono">
-      KW {{ monday.strftime('%V') }} &nbsp;·&nbsp;
-      {{ monday.strftime('%d.%m.') }} – {{ (monday + timedelta(4)).strftime('%d.%m.%Y') }}
-    </span>
-    <a href="/mein-stundenplan?woche={{ next_monday.isoformat() }}" class="btn btn-sm" title="Nächste Woche">
-      <i data-lucide="chevron-right"></i>
-    </a>
-  </div>
-  <span class="sp-source">
-    <i data-lucide="zap"></i> Quelle: WebUntis
-  </span>
-  <form method="POST" action="/mein-stundenplan/aktualisieren">
-    <input type="hidden" name="woche" value="{{ monday.isoformat() }}">
-    <button type="submit" class="btn btn-sm" style="background:var(--surface2);color:var(--text-dim)">
-      <i data-lucide="refresh-cw"></i> Aktualisieren
-    </button>
-  </form>
-</div>
+  function loadWeek(url) {
+    content.style.opacity  = '0.35';
+    content.style.transition = 'opacity 0.12s';
 
-<div class="table-scroll" style="margin-top:12px">
-  <table class="sp-table">
-    <thead>
-      <tr>
-        <th class="sp-num-col"></th>
-        {% for tag in wochentage %}
-        <th>
-          <span class="sp-th-day">{{ tag }}</span>
-          {% for exam in day_exams[loop.index0] %}
-          <div class="sp-exam-badge sp-exam-badge--{{ exam.art | lower | replace('schulaufgabe','sa') }}"
-               title="{{ exam.fach }} – {{ exam.art }}">
-            <i data-lucide="clipboard-pen"></i>
-            <span>{{ exam.fach }}</span>
-          </div>
-          {% endfor %}
-        </th>
-        {% endfor %}
-      </tr>
-    </thead>
-    <tbody>
-      {% for p in periods_info %}
-      <tr>
-        <td class="sp-time">
-          <span class="sp-time-start">{{ p.start }}</span>
-          <span class="sp-time-end">{{ p.end }}</span>
-        </td>
-        {% for d in range(5) %}
-        {% set slot = grid[p.stunde][d] %}
-        {% set pruefung = exam_cells.get((p.stunde, d)) %}
-        <td class="sp-cell
-          {% if slot %}
-            {% if slot.cancelled %}sp-cell--cancelled
-            {% else %}sp-cell--filled{% endif %}
-          {% endif %}
-          {% if pruefung %}sp-cell--pruefung sp-cell--pruefung-{{ pruefung.art | lower | replace('schulaufgabe','sa') }}{% endif %}">
-          {% if slot %}
-            {% if slot.cancelled %}
-            <div class="sp-fach sp-fach--cancelled">{{ slot.fach }}</div>
-            <div class="sp-sub sp-cancelled-badge">Entfällt</div>
-            {% else %}
-            <div class="sp-fach">{{ slot.fach }}</div>
-            {% if slot.raum %}<div class="sp-sub">{{ slot.raum }}</div>{% endif %}
-            {% if slot.lehrer %}<div class="sp-sub">{{ slot.lehrer }}</div>{% endif %}
-            {% if pruefung %}
-            <div class="sp-pruef-pill sp-pruef-pill--{{ pruefung.art | lower | replace('schulaufgabe','sa') }}">
-              <i data-lucide="alert-circle"></i> {{ pruefung.art }}
-            </div>
-            {% endif %}
-            {% endif %}
-          {% endif %}
-        </td>
-        {% endfor %}
-      </tr>
-      {% if p.pause_nach > 0 %}
-      <tr class="sp-pause-row">
-        <td class="sp-pause-cell" colspan="6">{{ p.pause_nach }} Min Pause</td>
-      </tr>
-      {% endif %}
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+    fetch(url, {
+      credentials: 'same-origin',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    })
+    .then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.text();
+    })
+    .then(function (html) {
+      content.innerHTML = html;
+      history.pushState(null, '', url);
+      lucide.createIcons();
+      content.style.transition = 'opacity 0.1s';
+      content.style.opacity    = '1';
+      attachListeners();
+      prefetchEdges();
+    })
+    .catch(function () { location.href = url; });
+  }
 
-{% endif %}
+  function prefetchEdges() {
+    content.querySelectorAll('.sp-nav-arrow').forEach(function (a) {
+      fetch(a.href, {
+        credentials: 'same-origin',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      }).catch(function () {});
+    });
+  }
 
+  function attachListeners() {
+    content.querySelectorAll('.sp-nav-arrow').forEach(function (a) {
+      a.addEventListener('click', function (e) {
+        e.preventDefault();
+        loadWeek(this.href);
+      });
+    });
+
+    var toggleBtn = content.querySelector('#sp-edit-toggle');
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', function () {
+        editMode = !editMode;
+        applyEditMode();
+      });
+    }
+
+    applyEditMode();
+    attachExForms();
+  }
+
+  window.addEventListener('popstate', function () { loadWeek(location.href); });
+
+  attachListeners();
+  prefetchEdges();
+})();
+</script>
 {% endblock %}

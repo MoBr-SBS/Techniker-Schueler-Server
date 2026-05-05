@@ -134,6 +134,7 @@ def _build_grid(periods, period_map: dict, n_periods: int, monday: datetime.date
 
         grid[stunde][wochentag] = {
             "fach":      _resolve_name(p.get("su") or [], subjects, long=True),
+            "fach_kurz": _resolve_name(p.get("su") or [], subjects, long=False),
             "lehrer":    _resolve_name(p.get("te") or [], teachers, long=False),
             "raum":      _resolve_name(p.get("ro") or [], rooms,    long=False),
             "cancelled": p.get("cellState") == "CANCELLED",
@@ -206,12 +207,16 @@ def fetch_timetable(server: str, school: str, username: str, password: str,
     return grid, monday, periods_info
 
 
+_RANGE_HALF = 2  # Wochen vor/nach der angefragten Woche, die pro Session mitgeladen werden
+
+
 def get_timetable_cached(user_id: int, server: str, school: str,
                          username: str, password: str,
                          monday: datetime.date = None) -> tuple:
     """
     Gibt (grid, monday, periods_info, warnung_oder_None) zurück.
-    Cache-Key: (user_id, monday_iso) – jede Woche wird separat gecacht.
+    Bei Cache-Miss werden ±_RANGE_HALF Wochen in einer einzigen Session geholt
+    und jeweils separat gecacht.
     """
     if monday is None:
         today  = datetime.date.today()
@@ -224,16 +229,66 @@ def get_timetable_cached(user_id: int, server: str, school: str,
         if age < CACHE_TTL:
             return cached["grid"], cached["monday"], cached["periods_info"], None
 
+    half        = _RANGE_HALF
+    range_start = monday - datetime.timedelta(weeks=half)
+    range_end   = monday + datetime.timedelta(weeks=half, days=4)
+
     try:
-        grid, monday, periods_info = fetch_timetable(
-            server, school, username, password, monday
-        )
-        _cache[cache_key] = {
-            "grid": grid, "monday": monday,
-            "periods_info": periods_info,
-            "ts": datetime.datetime.now(),
-        }
-        return grid, monday, periods_info, None
+        url = f"https://{server}/WebUntis/jsonrpc.do?school={school}"
+        s   = requests.Session()
+
+        auth = _rpc(s, url, "authenticate", {
+            "user": username, "password": password, "client": "schulserver",
+        })
+        person_id   = auth["personId"]
+        person_type = auth["personType"]
+        klasse_id   = auth.get("klasseId")
+
+        timegrid               = _safe_rpc(s, url, "getTimegridUnits")
+        period_map, periods_info = _parse_timegrid(timegrid)
+        n_periods              = len(periods_info) or 8
+
+        sd = int(range_start.strftime("%Y%m%d"))
+        ed = int(range_end.strftime("%Y%m%d"))
+
+        periods = _rpc(s, url, "getTimetable", {
+            "id": person_id, "type": person_type,
+            "startDate": sd, "endDate": ed,
+        })
+        if klasse_id and not periods:
+            periods = _rpc(s, url, "getTimetable", {
+                "id": klasse_id, "type": 1,
+                "startDate": sd, "endDate": ed,
+            })
+
+        raw_subjects = _safe_rpc(s, url, "getSubjects")
+        raw_teachers = _safe_rpc(s, url, "getTeachers")
+        raw_rooms    = _safe_rpc(s, url, "getRooms")
+        subjects = {item["id"]: item for item in raw_subjects if "id" in item}
+        teachers = {item["id"]: item for item in raw_teachers if "id" in item}
+        rooms    = {item["id"]: item for item in raw_rooms    if "id" in item}
+
+        try:
+            _rpc(s, url, "logout")
+        except Exception:
+            pass
+
+        # Alle Wochen im Range einzeln aufbauen und cachen
+        now = datetime.datetime.now()
+        for offset in range(-half, half + 1):
+            week_monday = monday + datetime.timedelta(weeks=offset)
+            grid = _build_grid(periods, period_map, n_periods, week_monday,
+                               subjects, teachers, rooms)
+            _cache[(user_id, week_monday.isoformat())] = {
+                "grid":         grid,
+                "monday":       week_monday,
+                "periods_info": periods_info,
+                "ts":           now,
+            }
+
+        entry = _cache[cache_key]
+        return entry["grid"], entry["monday"], entry["periods_info"], None
+
     except WebUntisError as e:
         if cached:
             return (cached["grid"], cached["monday"], cached["periods_info"],
@@ -252,3 +307,91 @@ def invalidate_cache(user_id: int, monday: datetime.date = None):
 
 def clear_all_caches():
     _cache.clear()
+
+
+# ── Prüfungen ─────────────────────────────────────────────────────────────────
+
+_EXAM_TYPE_MAP = {"SA": "Schulaufgabe", "Ex": "Ex"}
+
+
+def _parse_exam_date(d: int) -> datetime.date:
+    s = str(d)
+    return datetime.date(int(s[:4]), int(s[4:6]), int(s[6:]))
+
+
+def fetch_exams(server: str, school: str, username: str, password: str,
+                start_date: datetime.date, end_date: datetime.date) -> list:
+    """Gibt eine sortierte Liste normalisierter Prüfungs-Dicts zurück."""
+    url = f"https://{server}/WebUntis/jsonrpc.do?school={school}"
+    s   = requests.Session()
+
+    auth = _rpc(s, url, "authenticate", {
+        "user": username, "password": password, "client": "schulserver",
+    })
+    student_id = auth["personId"]
+
+    exams_url = f"https://{server}/WebUntis/api/exams"
+    try:
+        r = s.get(exams_url, params={
+            "startDate":  int(start_date.strftime("%Y%m%d")),
+            "endDate":    int(end_date.strftime("%Y%m%d")),
+            "studentId":  student_id,
+            "withGrades": "true",
+            "klasseId":   -1,
+        }, timeout=10)
+        r.raise_for_status()
+        raw = r.json().get("data", {}).get("exams", [])
+    except requests.RequestException as e:
+        raise WebUntisError(f"Prüfungen konnten nicht abgerufen werden: {e}")
+    finally:
+        try:
+            _rpc(s, url, "logout")
+        except Exception:
+            pass
+
+    result = []
+    for exam in raw:
+        try:
+            datum = _parse_exam_date(exam["examDate"])
+        except (KeyError, ValueError):
+            continue
+        result.append({
+            "datum":    datum,
+            "fach":     exam.get("subject", ""),
+            "art":      _EXAM_TYPE_MAP.get(exam.get("examType", ""), exam.get("examType", "")),
+            "name":     exam.get("name", ""),
+            "start":    _fmt(exam["startTime"]) if exam.get("startTime") else "",
+            "end":      _fmt(exam["endTime"])   if exam.get("endTime")   else "",
+            "rooms":    exam.get("rooms", []),
+            "teachers": exam.get("teachers", []),
+        })
+
+    result.sort(key=lambda x: x["datum"])
+    return result
+
+
+def get_exams_cached(user_id: int, server: str, school: str,
+                     username: str, password: str,
+                     start_date: datetime.date, end_date: datetime.date) -> tuple:
+    """Gibt (exams_liste, warnung_oder_None) zurück."""
+    cache_key = (user_id, "exams", start_date.isoformat(), end_date.isoformat())
+    cached    = _cache.get(cache_key)
+    if cached:
+        age = (datetime.datetime.now() - cached["ts"]).total_seconds()
+        if age < CACHE_TTL:
+            return cached["exams"], None
+
+    try:
+        exams = fetch_exams(server, school, username, password, start_date, end_date)
+        _cache[cache_key] = {"exams": exams, "ts": datetime.datetime.now()}
+        return exams, None
+    except WebUntisError as e:
+        if cached:
+            return cached["exams"], f"Aktualisierung fehlgeschlagen: {e}"
+        return [], str(e)
+
+
+def invalidate_exam_cache(user_id: int):
+    for key in list(_cache.keys()):
+        if key[0] == user_id and len(key) > 1 and key[1] == "exams":
+            _cache.pop(key, None)

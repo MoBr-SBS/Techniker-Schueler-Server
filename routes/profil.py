@@ -10,7 +10,14 @@ bp = Blueprint("profil", __name__)
 @bp.route("/profil")
 def index():
     creds = queries.get_webuntis_credentials(session["user_id"])
-    return render_template("profil.html", page_id="profil", creds=creds)
+    server, school = queries.get_webuntis_config()
+    return render_template(
+        "profil.html",
+        page_id="profil",
+        creds=creds,
+        wu_server=server,
+        wu_school=school,
+    )
 
 
 @bp.route("/profil/passwort", methods=["POST"])
@@ -34,17 +41,31 @@ def change_password():
 
 @bp.route("/profil/webuntis/speichern", methods=["POST"])
 def save_webuntis():
-    server    = request.form["server"].strip().rstrip("/")
-    school    = request.form["school"].strip()
     wt_user   = request.form["wt_username"].strip()
-    wt_pass   = request.form["wt_password"]
+    wt_pass   = request.form.get("wt_password", "")
     confirmed = request.form.get("hinweis_bestaetigt")
 
+    server, school = queries.get_webuntis_config()
+    if not server or not school:
+        flash("WebUntis ist noch nicht vom Administrator konfiguriert.", "error")
+        return redirect(url_for("profil.index"))
     if not confirmed:
         flash("Bitte bestätige den Sicherheitshinweis.", "error")
         return redirect(url_for("profil.index"))
-    if not all([server, school, wt_user, wt_pass]):
-        flash("Alle Felder sind Pflicht.", "error")
+    if not wt_user:
+        flash("Benutzername ist Pflicht.", "error")
+        return redirect(url_for("profil.index"))
+
+    creds = queries.get_webuntis_credentials(session["user_id"])
+    if not wt_pass and creds:
+        # Passwort unverändet – bestehenden verschlüsselten Wert behalten
+        queries.save_webuntis_credentials(session["user_id"], wt_user, creds["wt_password"])
+        invalidate_cache(session["user_id"])
+        flash("Benutzername aktualisiert.", "success")
+        return redirect(url_for("profil.index"))
+
+    if not wt_pass:
+        flash("Passwort ist Pflicht.", "error")
         return redirect(url_for("profil.index"))
 
     try:
@@ -53,9 +74,7 @@ def save_webuntis():
         flash(f"Verbindung fehlgeschlagen: {e}", "error")
         return redirect(url_for("profil.index"))
 
-    queries.save_webuntis_credentials(
-        session["user_id"], server, school, wt_user, encrypt(wt_pass)
-    )
+    queries.save_webuntis_credentials(session["user_id"], wt_user, encrypt(wt_pass))
     invalidate_cache(session["user_id"])
     flash("WebUntis-Zugangsdaten gespeichert. Verbindung erfolgreich getestet.", "success")
     return redirect(url_for("profil.index"))

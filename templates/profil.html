@@ -10,12 +10,26 @@
     <!-- WebUntis-Zugangsdaten -->
     <div class="section-label">WebUntis-Zugangsdaten</div>
 
-    {% if creds %}
-    <div class="widget" style="margin-bottom:16px">
+    {% if not wu_server or not wu_school %}
+    <div class="alert alert-info" style="margin-bottom:16px">
+      <i data-lucide="info"></i>
+      WebUntis wurde noch nicht vom Administrator konfiguriert.
+      {% if is_admin %}<a href="/admin/einstellungen" style="color:inherit;text-decoration:underline;margin-left:4px">Jetzt einrichten →</a>{% endif %}
+    </div>
+    {% else %}
+
+    <div class="widget" style="margin-bottom:12px">
       <div class="widget-body">
+        <div class="creds-status" style="margin-bottom:6px">
+          <span style="font-size:0.75rem;color:var(--text-muted)">
+            <i data-lucide="server" style="width:12px;height:12px"></i>
+            {{ wu_server }} &nbsp;·&nbsp; Schule: {{ wu_school }}
+          </span>
+        </div>
+        {% if creds %}
         <div class="creds-status">
           <span class="creds-ok"><i data-lucide="check-circle"></i> Verbunden</span>
-          <span class="text-muted mono" style="font-size:0.75rem">{{ creds.wt_username }} @ {{ creds.server }}</span>
+          <span class="text-muted mono" style="font-size:0.75rem">{{ creds.wt_username }}</span>
         </div>
         <p style="font-size:0.8rem;color:var(--text-muted);margin-top:8px">
           Zugangsdaten gespeichert am {{ creds.gespeichert_am[:10] }}.
@@ -27,9 +41,9 @@
             <i data-lucide="trash-2"></i> Zugangsdaten löschen
           </button>
         </form>
+        {% endif %}
       </div>
     </div>
-    {% endif %}
 
     <!-- Sicherheitshinweis -->
     <div class="warning-box">
@@ -53,16 +67,6 @@
       </div>
       <div class="widget-body">
         <form method="POST" action="/profil/webuntis/speichern" class="vform">
-          <label>WebUntis-Server
-            <input type="text" name="server"
-              value="{{ creds.server if creds else '' }}"
-              placeholder="z. B. mese.webuntis.com" required>
-          </label>
-          <label>Schulname (wie in der URL)
-            <input type="text" name="school"
-              value="{{ creds.school if creds else '' }}"
-              placeholder="z. B. bbs-musterstadt" required>
-          </label>
           <label>WebUntis-Benutzername
             <input type="text" name="wt_username"
               value="{{ creds.wt_username if creds else '' }}"
@@ -70,7 +74,7 @@
           </label>
           <label>WebUntis-Passwort
             <input type="password" name="wt_password"
-              placeholder="{% if creds %}Leer lassen = unveränert{% else %}Passwort{% endif %}"
+              placeholder="{% if creds %}Leer lassen = unverändert{% else %}Passwort{% endif %}"
               autocomplete="new-password" {% if not creds %}required{% endif %}>
           </label>
           <label class="checkbox-label">
@@ -83,6 +87,8 @@
         </form>
       </div>
     </div>
+
+    {% endif %}
 
   </div>
 

@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash
 from werkzeug.security import generate_password_hash
 from core import queries
+from core.webuntis_client import fetch_timetable, WebUntisError, clear_all_caches
 
 bp = Blueprint("admin", __name__)
 
@@ -60,3 +61,39 @@ def delete_benutzer(user_id):
     queries.delete_user(user_id)
     flash("Benutzer wurde gelöscht.", "success")
     return redirect(url_for("admin.benutzer"))
+
+
+@bp.route("/admin/einstellungen")
+def einstellungen():
+    guard = _require_admin()
+    if guard:
+        return guard
+    server, school = queries.get_webuntis_config()
+    return render_template(
+        "admin_einstellungen.html",
+        page_id="benutzer",
+        wu_server=server,
+        wu_school=school,
+    )
+
+
+@bp.route("/admin/einstellungen/webuntis", methods=["POST"])
+def save_webuntis_config():
+    guard = _require_admin()
+    if guard:
+        return guard
+
+    server = request.form.get("wu_server", "").strip().rstrip("/")
+    school = request.form.get("wu_school", "").strip()
+
+    if not server or not school:
+        flash("Server und Schulname sind Pflichtfelder.", "error")
+        return redirect(url_for("admin.einstellungen"))
+
+    # Verbindung testen – ohne echte Zugangsdaten nur Erreichbarkeit prüfen
+    # (Ein vollständiger Login-Test erfordert Nutzerdaten, den machen wir hier nicht.)
+    queries.set_app_setting("webuntis_server", server)
+    queries.set_app_setting("webuntis_school", school)
+    clear_all_caches()
+    flash(f"WebUntis-Konfiguration gespeichert: {server} / {school}", "success")
+    return redirect(url_for("admin.einstellungen"))

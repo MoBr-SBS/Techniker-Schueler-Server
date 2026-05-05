@@ -70,11 +70,44 @@ def init_db():
         CREATE TABLE IF NOT EXISTS pruefungen (
             id          INTEGER PRIMARY KEY AUTOINCREMENT,
             fach        TEXT NOT NULL,
-            art         TEXT NOT NULL CHECK(art IN ('Schulaufgabe', 'Ex')),
+            art         TEXT NOT NULL CHECK(art IN ('SA', 'Ex')),
             datum       TEXT NOT NULL,
+            notiz       TEXT DEFAULT '',
             erstellt_am TEXT DEFAULT (datetime('now'))
         );
+        CREATE TABLE IF NOT EXISTS app_settings (
+            key   TEXT PRIMARY KEY,
+            value TEXT NOT NULL DEFAULT ''
+        );
+        CREATE TABLE IF NOT EXISTS exam_notes (
+            exam_key   TEXT PRIMARY KEY,
+            content    TEXT NOT NULL DEFAULT '',
+            updated_at TEXT DEFAULT (datetime('now')),
+            updated_by TEXT NOT NULL DEFAULT ''
+        );
     """)
+    # Migration: pruefungen schema (SA/Ex constraint + notiz column)
+    row = db.execute(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='pruefungen'"
+    ).fetchone()
+    if row and ("'Schulaufgabe'" in row[0] or "notiz" not in row[0]):
+        db.execute("ALTER TABLE pruefungen RENAME TO _pruef_old")
+        db.execute("""CREATE TABLE pruefungen (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            fach TEXT NOT NULL,
+            art TEXT NOT NULL CHECK(art IN ('SA','Ex')),
+            datum TEXT NOT NULL,
+            notiz TEXT DEFAULT '',
+            erstellt_am TEXT DEFAULT (datetime('now'))
+        )""")
+        db.execute("""INSERT INTO pruefungen (id, fach, art, datum, notiz, erstellt_am)
+            SELECT id, fach,
+                   CASE WHEN art='Schulaufgabe' THEN 'SA' ELSE art END,
+                   datum, '', erstellt_am
+            FROM _pruef_old""")
+        db.execute("DROP TABLE _pruef_old")
+        db.commit()
+
     if db.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 0:
         from werkzeug.security import generate_password_hash
         db.execute(
