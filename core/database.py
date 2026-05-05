@@ -67,6 +67,13 @@ def init_db():
             wt_password    TEXT NOT NULL,
             gespeichert_am TEXT DEFAULT (datetime('now'))
         );
+        CREATE TABLE IF NOT EXISTS pruefungen (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            fach        TEXT NOT NULL,
+            art         TEXT NOT NULL CHECK(art IN ('Schulaufgabe', 'Ex')),
+            datum       TEXT NOT NULL,
+            erstellt_am TEXT DEFAULT (datetime('now'))
+        );
     """)
     if db.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 0:
         from werkzeug.security import generate_password_hash

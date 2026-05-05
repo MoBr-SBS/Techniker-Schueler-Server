@@ -900,6 +900,11 @@ body.login-body {
   gap: 16px;
   flex-wrap: wrap;
 }
+.sp-week-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
 .sp-week-label { color: var(--text-dim); font-size: 0.82rem; }
 .sp-source {
   display: flex;
@@ -914,7 +919,208 @@ body.login-body {
 }
 .sp-source i { width: 12px; height: 12px; }
 
+.sp-th-day { display: block; }
+/* Exam-Badge im Spalten-Header */
+.sp-exam-badge {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 5px;
+  padding: 3px 7px;
+  border-radius: var(--radius-sm);
+  font-size: 0.68rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: default;
+}
+.sp-exam-badge--sa {
+  background: rgba(247, 95, 95, 0.12);
+  border: 1px solid rgba(247, 95, 95, 0.3);
+  color: var(--red);
+}
+.sp-exam-badge--ex {
+  background: rgba(79, 142, 247, 0.12);
+  border: 1px solid rgba(79, 142, 247, 0.3);
+  color: var(--blue);
+}
+.sp-exam-badge i { width: 11px; height: 11px; flex-shrink: 0; }
+
+/* Zell-Hervorhebung bei Prüfung */
+.sp-cell--pruefung-sa { border-left: 3px solid var(--red) !important; }
+.sp-cell--pruefung-ex { border-left: 3px solid var(--blue) !important; }
+
+/* Pill innerhalb der Zelle */
+.sp-pruef-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 5px;
+  padding: 2px 6px;
+  border-radius: 99px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+.sp-pruef-pill--sa { background: rgba(247,95,95,0.15); color: var(--red); }
+.sp-pruef-pill--ex { background: rgba(79,142,247,0.15); color: var(--blue); }
+.sp-pruef-pill i { width: 10px; height: 10px; }
+
 .sp-cell--cancelled { background: rgba(247,95,95,0.06) !important; }
+
+/* ── Prüfungsliste ───────────────────────────────────────────────────────── */
+.pruef-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.pruef-source {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--blue);
+  margin-right: auto;
+}
+.pruef-source i { width: 12px; height: 12px; }
+
+.pruef-list { display: flex; flex-direction: column; gap: 2px; }
+
+.pruef-month-header {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 18px 0 6px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 4px;
+}
+.pruef-month-header:first-child { padding-top: 0; }
+
+.pruef-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  transition: border-color var(--transition);
+  flex-wrap: wrap;
+}
+.pruef-item:hover { border-color: var(--border2); }
+.pruef-item--heute {
+  border-color: var(--orange);
+  background: rgba(245,156,61,0.05);
+}
+
+.pruef-date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 36px;
+  flex-shrink: 0;
+}
+.pruef-wd {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  letter-spacing: 0.05em;
+}
+.pruef-day {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+  font-family: var(--font-mono);
+}
+
+.pruef-fach {
+  flex: 1;
+  font-weight: 600;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 120px;
+}
+.pruef-heute-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  background: var(--orange);
+  color: #000;
+  border-radius: 99px;
+  letter-spacing: 0.04em;
+}
+
+.pruef-meta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+}
+.pruef-meta > span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.pruef-meta i { width: 12px; height: 12px; }
+
+.pruef-main { min-width: 0; }
+
+.pruef-item--past { opacity: 0.6; }
+
+.pruef-countdown {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  white-space: nowrap;
+  margin-left: auto;
+}
+
+.pruef-art-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 99px;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+.pruef-art--sa {
+  background: rgba(247, 95, 95, 0.15);
+  color: var(--red);
+  border: 1px solid rgba(247, 95, 95, 0.3);
+}
+.pruef-art--ex {
+  background: rgba(79, 142, 247, 0.15);
+  color: var(--blue);
+  border: 1px solid rgba(79, 142, 247, 0.3);
+}
+
+.btn-icon-del {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  border-radius: var(--radius-sm);
+  transition: color var(--transition), background var(--transition);
+}
+.btn-icon-del:hover { color: var(--red); background: rgba(247,95,95,0.1); }
+.btn-icon-del i { width: 14px; height: 14px; }
+
 .sp-fach--cancelled {
   text-decoration: line-through;
   color: var(--text-muted) !important;

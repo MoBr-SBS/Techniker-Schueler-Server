@@ -230,7 +230,8 @@ def get_timetable_cached(user_id: int, server: str, school: str,
         )
         _cache[cache_key] = {
             "grid": grid, "monday": monday,
-            "periods_info": periods_info, "ts": datetime.datetime.now(),
+            "periods_info": periods_info,
+            "ts": datetime.datetime.now(),
         }
         return grid, monday, periods_info, None
     except WebUntisError as e:

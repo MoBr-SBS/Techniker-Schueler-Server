@@ -29,9 +29,11 @@ def create_app(config: Config = None) -> Flask:
     from routes.admin            import bp as admin_bp
     from routes.profil           import bp as profil_bp
     from routes.mein_stundenplan import bp as mein_stundenplan_bp
+    from routes.pruefungen       import bp as pruefungen_bp
 
     for bp in (dashboard_bp, stats_bp, settings_bp, stundenplan_bp,
-               tests_bp, noten_bp, auth_bp, admin_bp, profil_bp, mein_stundenplan_bp):
+               tests_bp, noten_bp, auth_bp, admin_bp, profil_bp,
+               mein_stundenplan_bp, pruefungen_bp):
         app.register_blueprint(bp)
 
     @app.before_request

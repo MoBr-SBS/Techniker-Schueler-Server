@@ -172,6 +172,29 @@ def delete_user(user_id):
     db.commit()
 
 
+# ── Prüfungen ─────────────────────────────────────────────────────────────────
+
+def get_all_pruefungen():
+    return get_db().execute(
+        "SELECT * FROM pruefungen ORDER BY datum"
+    ).fetchall()
+
+
+def add_pruefung(fach, art, datum):
+    db = get_db()
+    db.execute(
+        "INSERT INTO pruefungen (fach, art, datum) VALUES (?,?,?)",
+        (fach, art, datum),
+    )
+    db.commit()
+
+
+def delete_pruefung(pruefung_id):
+    db = get_db()
+    db.execute("DELETE FROM pruefungen WHERE id=?", (pruefung_id,))
+    db.commit()
+
+
 # ── WebUntis-Zugangsdaten ─────────────────────────────────────────────────────
 
 def get_webuntis_credentials(user_id):
