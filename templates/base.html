@@ -11,7 +11,7 @@
   <script>
     (function(){
       var t = localStorage.getItem('theme');
-      if (t === 'light') document.documentElement.setAttribute('data-theme','light');
+      if (t !== 'dark') document.documentElement.setAttribute('data-theme','light');
     })();
   </script>
 </head>
@@ -71,7 +71,7 @@
       <h1 class="page-title">{% block page_title %}{% endblock %}</h1>
       <div class="topbar-right">
         <button class="theme-toggle" id="theme-toggle" title="Dark/Light Mode">
-          <i data-lucide="sun" id="theme-icon"></i>
+          <i data-lucide="moon" id="theme-icon"></i>
         </button>
         <span class="mono time-display" id="clock"></span>
         {% if current_user %}

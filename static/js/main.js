@@ -10,8 +10,7 @@
 })();
 
 (function () {
-  const btn  = document.getElementById("theme-toggle");
-  const icon = document.getElementById("theme-icon");
+  const btn = document.getElementById("theme-toggle");
   if (!btn) return;
 
   function isLight() {
@@ -19,7 +18,7 @@
   }
 
   function applyIcon() {
-    icon.setAttribute("data-lucide", isLight() ? "moon" : "sun");
+    btn.innerHTML = `<i data-lucide="${isLight() ? "moon" : "sun"}" id="theme-icon"></i>`;
     lucide.createIcons();
   }
 

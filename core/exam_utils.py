@@ -9,8 +9,13 @@ from core.encryption import decrypt
 from core.webuntis_client import get_exams_cached
 
 _WOCHENTAGE = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
-_RANGE_PAST = 60
 _RANGE_FUTURE = 180
+
+
+def _schuljahr_beginn(today: datetime.date) -> datetime.date:
+    """Gibt den 1. September des aktuellen Schuljahres zurück."""
+    year = today.year if today.month >= 9 else today.year - 1
+    return datetime.date(year, 9, 1)
 
 
 def load_webuntis_exams(user_id, today):
@@ -18,7 +23,7 @@ def load_webuntis_exams(user_id, today):
     if not creds:
         return [], None, False
 
-    start = today - datetime.timedelta(days=_RANGE_PAST)
+    start = _schuljahr_beginn(today)
     end = today + datetime.timedelta(days=_RANGE_FUTURE)
     server, school = queries.get_webuntis_config()
 

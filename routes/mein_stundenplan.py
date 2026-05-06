@@ -108,6 +108,7 @@ def index():
             day_exams[day_idx].append(manual_exam)
 
     today = datetime.date.today()
+    now_time_str = datetime.datetime.now().strftime("%H:%M")
     is_xhr = request.headers.get("X-Requested-With") == "XMLHttpRequest"
     template = "mein_stundenplan_partial.html" if is_xhr else "mein_stundenplan.html"
 
@@ -127,6 +128,7 @@ def index():
         prev_monday=prev_monday,
         next_monday=next_monday,
         today=today,
+        now_time_str=now_time_str,
         fetch_error=warning if grid is None else None,
         fetch_warning=warning if grid is not None else None,
     )

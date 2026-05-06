@@ -1494,6 +1494,26 @@ a.sp-pruef-pill:hover { filter: brightness(1.2); }
 
 .sp-cell--cancelled { background: rgba(247,95,95,0.06) !important; }
 
+/* ── Vergangene Tage / Heutiger Tag / Aktuelle Stunde ───────────────────── */
+.sp-th--past { opacity: 0.45; }
+
+.sp-th--today { border-bottom: 2px solid var(--blue); }
+.sp-th--today .sp-th-day { color: var(--blue); font-weight: 800; }
+
+.sp-cell--past-day { opacity: 0.45; }
+.sp-cell--past-day.sp-cell--filled { background: var(--surface) !important; }
+
+.sp-cell--past-slot { opacity: 0.45; }
+.sp-cell--past-slot.sp-cell--filled { background: var(--surface) !important; }
+
+.sp-cell--now {
+  border-left: 3px solid var(--blue);
+  background: rgba(79, 142, 247, 0.07) !important;
+}
+.sp-cell--now.sp-cell--filled {
+  background: rgba(79, 142, 247, 0.09) !important;
+}
+
 /* ── Abwesenheit ─────────────────────────────────────────────────────────── */
 .abs-reasons { display: flex; flex-direction: column; gap: 10px; }
 .abs-reason-row {

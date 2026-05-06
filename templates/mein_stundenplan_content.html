@@ -56,7 +56,8 @@
         <th class="sp-num-col"></th>
         {% for tag in wochentage %}
         {% set d_idx = loop.index0 %}
-        <th>
+        {% set col_date = monday + timedelta(d_idx) %}
+        <th class="{% if col_date < today %}sp-th--past{% elif col_date == today %}sp-th--today{% endif %}">
           <span class="sp-th-day">{{ tag }}</span>
           {% for exam in day_exams[d_idx] %}
           <a href="{{ url_for('pruefungen.notiz', exam_key=exam.exam_key,
@@ -85,7 +86,15 @@
         {% set slot_datum = monday + timedelta(d) %}
         {% set manual_key = (slot.fach | lower + '_' + d | string) if slot else '' %}
         {% set manual_pruefung = manual_exam_cells.get(manual_key) if slot else None %}
+        {% set is_past_day = slot_datum < today %}
+        {% set is_today_col = slot_datum == today %}
+        {% set is_past_slot = is_today_col and p.end <= now_time_str %}
+        {% set is_current_slot = is_today_col and p.start <= now_time_str and p.end > now_time_str %}
         <td class="sp-cell
+          {% if is_past_day %}sp-cell--past-day
+          {% elif is_past_slot %}sp-cell--past-slot
+          {% elif is_current_slot %}sp-cell--now
+          {% endif %}
           {% if slot %}
             {% if slot.cancelled %}sp-cell--cancelled
             {% else %}sp-cell--filled{% endif %}
