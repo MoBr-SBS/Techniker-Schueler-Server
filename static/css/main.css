@@ -435,7 +435,7 @@ a { text-decoration: none; color: inherit; }
   border-radius: var(--radius);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible;
 }
 .widget.span-2 { grid-column: span 2; }
 .widget-header {
@@ -449,6 +449,7 @@ a { text-decoration: none; color: inherit; }
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--text-dim);
+  border-radius: var(--radius) var(--radius) 0 0;
 }
 .widget-header i { width: 15px; height: 15px; }
 .widget-body { padding: 20px; flex: 1; }
