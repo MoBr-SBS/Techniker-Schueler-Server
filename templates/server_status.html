@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% block title %}Server-Status{% endblock %}
+{% block page_title %}Server-Status{% endblock %}
+
+{% block content %}
+<div class="page-cols">
+
+  <div style="flex:1;min-width:0">
+
+    <!-- CPU -->
+    <div class="section-label">Prozessor</div>
+    <div class="widget" style="margin-bottom:16px">
+      <div class="widget-header">
+        <i data-lucide="cpu"></i>
+        <span>CPU</span>
+        <span class="mono" style="margin-left:auto;font-size:0.8rem;color:var(--text-muted)">
+          {{ status.cpu_count }} Kerne / {{ status.cpu_count_logical }} Threads
+          {% if status.cpu_freq_mhz %}&nbsp;· {{ status.cpu_freq_mhz }} MHz{% endif %}
+        </span>
+      </div>
+      <div class="widget-body">
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:6px">
+          <span class="mono" style="font-size:2rem;font-weight:600;color:{% if status.cpu_percent > 85 %}var(--red){% elif status.cpu_percent > 60 %}var(--orange){% else %}var(--accent){% endif %}">
+            {{ status.cpu_percent }}%
+          </span>
+          <span style="font-size:0.82rem;color:var(--text-muted)">Auslastung</span>
+        </div>
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill {% if status.cpu_percent > 85 %}progress-danger{% elif status.cpu_percent > 60 %}progress-warn{% endif %}"
+               style="width:{{ status.cpu_percent }}%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RAM -->
+    <div class="section-label">Arbeitsspeicher</div>
+    <div class="widget" style="margin-bottom:16px">
+      <div class="widget-header">
+        <i data-lucide="memory-stick"></i>
+        <span>RAM</span>
+        <span class="mono" style="margin-left:auto;font-size:0.8rem;color:var(--text-muted)">
+          {{ status.mem_total_gb }} GB gesamt
+        </span>
+      </div>
+      <div class="widget-body">
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:6px">
+          <span class="mono" style="font-size:2rem;font-weight:600;color:{% if status.mem_percent > 85 %}var(--red){% elif status.mem_percent > 65 %}var(--orange){% else %}var(--accent){% endif %}">
+            {{ status.mem_percent }}%
+          </span>
+          <span style="font-size:0.82rem;color:var(--text-muted)">
+            {{ status.mem_used_gb }} GB belegt &nbsp;·&nbsp; {{ status.mem_free_gb }} GB frei
+          </span>
+        </div>
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill {% if status.mem_percent > 85 %}progress-danger{% elif status.mem_percent > 65 %}progress-warn{% endif %}"
+               style="width:{{ status.mem_percent }}%"></div>
+        </div>
+        {% if status.swap_total_gb > 0 %}
+        <div style="margin-top:12px;font-size:0.8rem;color:var(--text-muted)">
+          Swap: {{ status.swap_used_gb }} / {{ status.swap_total_gb }} GB ({{ status.swap_percent }}%)
+          <div class="progress-bar-track" style="height:4px;margin-top:4px">
+            <div class="progress-bar-fill" style="width:{{ status.swap_percent }}%;opacity:0.6"></div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Festplatten -->
+    <div class="section-label">Festplatten</div>
+    {% for disk in status.disk_partitions %}
+    <div class="widget" style="margin-bottom:12px">
+      <div class="widget-header">
+        <i data-lucide="hard-drive"></i>
+        <span class="mono" style="font-size:0.85rem">{{ disk.device }}</span>
+        <span style="margin-left:8px;font-size:0.75rem;color:var(--text-muted)">
+          {{ disk.mountpoint }} &nbsp;({{ disk.fstype }})
+        </span>
+        <span class="mono" style="margin-left:auto;font-size:0.8rem;color:var(--text-muted)">
+          {{ disk.total_gb }} GB
+        </span>
+      </div>
+      <div class="widget-body">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:6px">
+          <span class="mono" style="font-size:1.5rem;font-weight:600;color:{% if disk.percent > 90 %}var(--red){% elif disk.percent > 75 %}var(--orange){% else %}var(--accent){% endif %}">
+            {{ disk.percent }}%
+          </span>
+          <span style="font-size:0.82rem;color:var(--text-muted)">
+            {{ disk.used_gb }} GB belegt &nbsp;·&nbsp; {{ disk.free_gb }} GB frei
+          </span>
+        </div>
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill {% if disk.percent > 90 %}progress-danger{% elif disk.percent > 75 %}progress-warn{% endif %}"
+               style="width:{{ disk.percent }}%"></div>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+
+    <!-- Temperaturen (nur Linux) -->
+    {% if status.temperatures %}
+    <div class="section-label">Temperaturen</div>
+    <div class="widget" style="margin-bottom:16px">
+      <div class="widget-header">
+        <i data-lucide="thermometer"></i>
+        <span>Sensoren</span>
+      </div>
+      <div class="widget-body">
+        <div style="display:flex;flex-wrap:wrap;gap:16px">
+          {% for t in status.temperatures %}
+          <div style="text-align:center;min-width:80px">
+            <div class="mono" style="font-size:1.4rem;font-weight:600;color:{% if t.current > 80 %}var(--red){% elif t.current > 65 %}var(--orange){% else %}var(--accent){% endif %}">
+              {{ t.current|round(1) }}°C
+            </div>
+            <div style="font-size:0.75rem;color:var(--text-muted)">{{ t.label }}</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+
+  <!-- Sidebar rechts -->
+  <div style="max-width:280px;min-width:220px">
+
+    <!-- Netzwerk -->
+    <div class="section-label">Netzwerk</div>
+    <div class="widget sidebar-form" style="margin-bottom:16px">
+      <div class="widget-header">
+        <i data-lucide="network"></i>
+        <span>I/O gesamt</span>
+      </div>
+      <div class="widget-body">
+        <div style="display:flex;flex-direction:column;gap:10px;font-size:0.85rem">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="color:var(--text-muted)"><i data-lucide="upload" style="width:13px;height:13px;vertical-align:middle"></i> Gesendet</span>
+            <span class="mono">{{ status.net_sent_mb }} MB</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="color:var(--text-muted)"><i data-lucide="download" style="width:13px;height:13px;vertical-align:middle"></i> Empfangen</span>
+            <span class="mono">{{ status.net_recv_mb }} MB</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- System-Info -->
+    <div class="section-label">System</div>
+    <div class="widget sidebar-form" style="margin-bottom:16px">
+      <div class="widget-header">
+        <i data-lucide="server"></i>
+        <span>Info</span>
+      </div>
+      <div class="widget-body">
+        <div style="display:flex;flex-direction:column;gap:10px;font-size:0.85rem">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="color:var(--text-muted)">Uptime</span>
+            <span class="mono">{{ status.uptime_str }}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="color:var(--text-muted)">Letzter Start</span>
+            <span class="mono" style="font-size:0.78rem">{{ status.boot_time }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Aktualisieren -->
+    <form method="GET" action="/admin/server-status">
+      <button type="submit" class="btn btn-primary" style="width:100%">
+        <i data-lucide="refresh-cw"></i> Aktualisieren
+      </button>
+    </form>
+    <p style="font-size:0.75rem;color:var(--text-muted);margin-top:8px;text-align:center">
+      Werte werden bei jedem Seitenaufruf neu gemessen.
+    </p>
+
+  </div>
+</div>
+
+<style>
+.progress-bar-track {
+  width: 100%;
+  height: 8px;
+  background: var(--surface2);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.progress-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+.progress-bar-fill.progress-warn   { background: var(--orange); }
+.progress-bar-fill.progress-danger { background: var(--red); }
+</style>
+{% endblock %}

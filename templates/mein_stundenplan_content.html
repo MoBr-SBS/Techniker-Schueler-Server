@@ -90,6 +90,7 @@
         {% set is_today_col = slot_datum == today %}
         {% set is_past_slot = is_today_col and p.end <= now_time_str %}
         {% set is_current_slot = is_today_col and p.start <= now_time_str and p.end > now_time_str %}
+        {% set absence = absence_cells.get((p.stunde, d)) %}
         <td class="sp-cell
           {% if is_past_day %}sp-cell--past-day
           {% elif is_past_slot %}sp-cell--past-slot
@@ -101,7 +102,14 @@
           {% endif %}
           {% if manual_pruefung or wu_pruefung %}sp-cell--pruefung{% endif %}
           {% if manual_pruefung %}sp-cell--pruefung-ex
-          {% elif wu_pruefung %}sp-cell--pruefung-{{ wu_pruefung.art | lower | replace('schulaufgabe','sa') }}{% endif %}">
+          {% elif wu_pruefung %}sp-cell--pruefung-{{ wu_pruefung.art | lower | replace('schulaufgabe','sa') }}{% endif %}"
+          {% if absence %}title="Abwesend ({{ 'entschuldigt' if absence.is_excused else 'unentschuldigt' }}): {{ absence.reason }} · {{ absence.start_time }}–{{ absence.end_time }}"{% endif %}>
+
+          {% if absence %}
+          <span class="sp-absent-icon sp-absent-icon--{{ 'excused' if absence.is_excused else 'unexcused' }}">
+            <i data-lucide="user-x"></i>
+          </span>
+          {% endif %}
 
           {% if slot %}
             {% if slot.cancelled %}

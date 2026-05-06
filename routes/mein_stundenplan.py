@@ -3,7 +3,7 @@ import datetime
 from flask import Blueprint, render_template, session, current_app, redirect, url_for, request
 from core import queries
 from core.encryption import decrypt
-from core.webuntis_client import get_timetable_cached, get_exams_cached, invalidate_cache, invalidate_exam_cache
+from core.webuntis_client import get_timetable_cached, get_exams_cached, get_absences_cached, invalidate_cache, invalidate_exam_cache
 from core.nav import NAV_ITEMS
 
 bp = Blueprint("mein_stundenplan", __name__)
@@ -107,6 +107,25 @@ def index():
             manual_exam_cells[key] = manual_exam
             day_exams[day_idx].append(manual_exam)
 
+    # Abwesenheiten für die Woche laden und auf Zellen mappen
+    week_absences, _ = get_absences_cached(
+        session["user_id"],
+        server, school, wu_user, wu_pass,
+        monday, week_end,
+    )
+    absence_cells = {}
+    for absence in week_absences:
+        if not absence["start_time"] or not absence["end_time"]:
+            continue
+        day_idx = (absence["datum"] - monday).days
+        if not (0 <= day_idx <= 4):
+            continue
+        for p in periods_info:
+            if absence["start_time"] < p["end"] and absence["end_time"] > p["start"]:
+                key = (p["stunde"], day_idx)
+                if key not in absence_cells:
+                    absence_cells[key] = absence
+
     today = datetime.date.today()
     now_time_str = datetime.datetime.now().strftime("%H:%M")
     is_xhr = request.headers.get("X-Requested-With") == "XMLHttpRequest"
@@ -123,6 +142,7 @@ def index():
         day_exams=day_exams,
         exam_cells=exam_cells,
         manual_exam_cells=manual_exam_cells,
+        absence_cells=absence_cells,
         wochentage=WOCHENTAGE,
         monday=monday,
         prev_monday=prev_monday,

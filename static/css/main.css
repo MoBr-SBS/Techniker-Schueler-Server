@@ -1514,6 +1514,20 @@ a.sp-pruef-pill:hover { filter: brightness(1.2); }
   background: rgba(79, 142, 247, 0.09) !important;
 }
 
+/* ── Abwesenheit im Stundenplan ─────────────────────────────────────────── */
+.sp-absent-icon {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.75;
+}
+.sp-absent-icon i { width: 13px; height: 13px; }
+.sp-absent-icon--excused   { color: var(--orange); }
+.sp-absent-icon--unexcused { color: var(--red); }
+
 /* ── Abwesenheit ─────────────────────────────────────────────────────────── */
 .abs-reasons { display: flex; flex-direction: column; gap: 10px; }
 .abs-reason-row {
