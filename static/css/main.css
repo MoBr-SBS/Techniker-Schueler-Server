@@ -1680,8 +1680,8 @@ a.sp-pruef-pill:hover { filter: brightness(1.2); }
   content: attr(data-tooltip);
   position: absolute;
   bottom: calc(100% + 7px);
-  left: 50%;
-  transform: translateX(-50%);
+  left: 0;
+  transform: none;
   background: var(--surface2);
   border: 1px solid var(--border2);
   border-radius: var(--radius-sm);
