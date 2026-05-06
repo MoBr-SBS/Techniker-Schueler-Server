@@ -9,6 +9,7 @@ NAV_ITEMS = [
     {"id": "dashboard",        "label": "Dashboard",        "icon": "grid",           "url": "/"},
     {"id": "mein_stundenplan", "label": "Mein Stundenplan", "icon": "calendar-check",  "url": "/mein-stundenplan"},
     {"id": "pruefungen",      "label": "Prüfungen",        "icon": "clipboard-list",  "url": "/pruefungen"},
+    {"id": "abwesenheit",     "label": "Abwesenheit",      "icon": "user-x",          "url": "/abwesenheit"},
     {"id": "noten",            "label": "Noten",            "icon": "award",          "url": "/noten"},
     {"id": "stats",            "label": "Statistiken",      "icon": "bar-chart-2",    "url": "/stats"},
     {"id": "settings",         "label": "Einstellungen",    "icon": "settings",       "url": "/settings"},

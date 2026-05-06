@@ -395,3 +395,239 @@ def invalidate_exam_cache(user_id: int):
     for key in list(_cache.keys()):
         if key[0] == user_id and len(key) > 1 and key[1] == "exams":
             _cache.pop(key, None)
+
+
+# ── Abwesenheiten ─────────────────────────────────────────────────────────────
+
+_REASON_FALLBACK = {"", "-", "–"}
+
+
+def fetch_absences(server: str, school: str, username: str, password: str,
+                   start_date: datetime.date, end_date: datetime.date) -> list:
+    """Gibt eine Liste normalisierter Abwesenheits-Dicts zurück (neueste zuerst).
+    Einträge die ausschließlich nach Schulende liegen werden ausgeschlossen;
+    Endzeiten jenseits des Schulendes werden auf das Schulende gekappt."""
+    url = f"https://{server}/WebUntis/jsonrpc.do?school={school}"
+    s   = requests.Session()
+
+    auth = _rpc(s, url, "authenticate", {
+        "user": username, "password": password, "client": "schulserver",
+    })
+    student_id  = auth["personId"]
+    person_type = auth["personType"]
+    klasse_id   = auth.get("klasseId")
+
+    timegrid = _safe_rpc(s, url, "getTimegridUnits")
+    _, periods_info = _parse_timegrid(timegrid)
+
+    # Timegrid enthält oft Abendslots (Abendschule), daher echtes Schulende
+    # aus dem tatsächlichen Stundenplan des Schülers ableiten.
+    today     = datetime.date.today()
+    sp_monday = today - datetime.timedelta(days=today.weekday())
+    if today.weekday() >= 5:
+        sp_monday -= datetime.timedelta(weeks=1)
+    sp_sd = int(sp_monday.strftime("%Y%m%d"))
+    sp_ed = int((sp_monday + datetime.timedelta(days=4)).strftime("%Y%m%d"))
+    sp_periods = _safe_rpc(s, url, "getTimetable", {
+        "id": student_id, "type": person_type,
+        "startDate": sp_sd, "endDate": sp_ed,
+    })
+    if klasse_id and not sp_periods:
+        sp_periods = _safe_rpc(s, url, "getTimetable", {
+            "id": klasse_id, "type": 1,
+            "startDate": sp_sd, "endDate": sp_ed,
+        })
+    lesson_ends = [p.get("endTime", 0) for p in (sp_periods or []) if p.get("endTime", 0) > 0]
+    if lesson_ends:
+        school_end = max(lesson_ends)
+    elif periods_info:
+        school_end = min(periods_info[-1]["end_int"], 1700)
+    else:
+        school_end = 1700
+
+    absences_url = f"https://{server}/WebUntis/api/classreg/absences/students"
+    try:
+        r = s.get(absences_url, params={
+            "startDate":      int(start_date.strftime("%Y%m%d")),
+            "endDate":        int(end_date.strftime("%Y%m%d")),
+            "studentId":      student_id,
+            "excuseStatusId": -1,
+        }, timeout=10)
+        r.raise_for_status()
+        raw = r.json().get("data", {}).get("absences", [])
+    except requests.RequestException as e:
+        raise WebUntisError(f"Abwesenheiten konnten nicht abgerufen werden: {e}")
+    finally:
+        try:
+            _rpc(s, url, "logout")
+        except Exception:
+            pass
+
+    result = []
+    for a in raw:
+        try:
+            datum = _parse_exam_date(a["startDate"])
+        except (KeyError, ValueError):
+            continue
+
+        st = a.get("startTime", 0)
+        et = a.get("endTime",   0)
+
+        if school_end and st:
+            # Abwesenheit beginnt nach Schulende → komplett ignorieren
+            if st >= school_end:
+                continue
+            # Abwesenheit endet nach Schulende → Endzeit auf Schulende kappen
+            if et and et > school_end:
+                et = school_end
+
+        mins = max(_to_minutes(et) - _to_minutes(st), 0) if st and et else 0
+
+        reason = (a.get("reason") or "").strip()
+        if reason in _REASON_FALLBACK:
+            reason = "Kein Grund"
+
+        result.append({
+            "datum":         datum,
+            "start_time":    _fmt(st) if st else "",
+            "end_time":      _fmt(et) if et else "",
+            "minutes":       mins,
+            "reason":        reason,
+            "text":          (a.get("text") or "").strip(),
+            "is_excused":    bool(a.get("isExcused")),
+            "excuse_status": a.get("excuseStatus"),
+        })
+
+    result.sort(key=lambda x: (x["datum"], x["start_time"]), reverse=True)
+    return result
+
+
+def get_absences_cached(user_id: int, server: str, school: str,
+                        username: str, password: str,
+                        start_date: datetime.date, end_date: datetime.date) -> tuple:
+    """Gibt (absences_liste, warnung_oder_None) zurück."""
+    cache_key = (user_id, "absences", start_date.isoformat(), end_date.isoformat())
+    cached    = _cache.get(cache_key)
+    if cached:
+        age = (datetime.datetime.now() - cached["ts"]).total_seconds()
+        if age < CACHE_TTL:
+            return cached["absences"], None
+
+    try:
+        absences = fetch_absences(server, school, username, password, start_date, end_date)
+        _cache[cache_key] = {"absences": absences, "ts": datetime.datetime.now()}
+        return absences, None
+    except WebUntisError as e:
+        if cached:
+            return cached["absences"], f"Aktualisierung fehlgeschlagen: {e}"
+        return [], str(e)
+
+
+def invalidate_absence_cache(user_id: int):
+    for key in list(_cache.keys()):
+        if key[0] == user_id and len(key) > 1 and key[1] == "absences":
+            _cache.pop(key, None)
+
+
+# ── Soll-Stunden (für BAföG-Quote) ───────────────────────────────────────────
+
+def _count_scheduled_minutes(periods: list, start_date: datetime.date,
+                              end_date: datetime.date,
+                              cutoff_date: datetime.date) -> tuple:
+    """Zählt geplante (nicht ausgefallene) Unterrichtsminuten.
+    Gibt (minuten_bis_cutoff, minuten_gesamt) zurück."""
+    seen: set = set()
+    until_cutoff = 0
+    total = 0
+    for p in (periods or []):
+        date_str = str(p.get("date", ""))
+        if len(date_str) != 8:
+            continue
+        try:
+            lesson_date = datetime.date(int(date_str[:4]), int(date_str[4:6]), int(date_str[6:]))
+        except ValueError:
+            continue
+        if not (start_date <= lesson_date <= end_date):
+            continue
+        if p.get("cellState") == "CANCELLED":
+            continue
+        st = p.get("startTime", 0)
+        et = p.get("endTime", 0)
+        if not st or not et:
+            continue
+        key = (lesson_date, st, et)
+        if key in seen:
+            continue
+        seen.add(key)
+        mins = _to_minutes(et) - _to_minutes(st)
+        if mins <= 0:
+            continue
+        if lesson_date <= cutoff_date:
+            until_cutoff += mins
+        total += mins
+    return until_cutoff, total
+
+
+def fetch_scheduled_hours(server: str, school: str, username: str, password: str,
+                          start_date: datetime.date, end_date: datetime.date) -> tuple:
+    """Gibt (soll_minuten_bis_heute, soll_minuten_schuljahr) zurück.
+    Holt den Stundenplan in 8-Wochen-Blöcken innerhalb einer Session,
+    weil viele WebUntis-Server den Datumsbereich pro Aufruf begrenzen."""
+    url = f"https://{server}/WebUntis/jsonrpc.do?school={school}"
+    s   = requests.Session()
+    auth = _rpc(s, url, "authenticate", {
+        "user": username, "password": password, "client": "schulserver",
+    })
+    person_id   = auth["personId"]
+    person_type = auth["personType"]
+    klasse_id   = auth.get("klasseId")
+
+    CHUNK_WEEKS = 8
+    all_periods: list = []
+    cursor = start_date - datetime.timedelta(days=start_date.weekday())  # → Montag
+    while cursor <= end_date:
+        chunk_end = min(cursor + datetime.timedelta(weeks=CHUNK_WEEKS, days=-1), end_date)
+        sd = int(cursor.strftime("%Y%m%d"))
+        ed = int(chunk_end.strftime("%Y%m%d"))
+        chunk = _safe_rpc(s, url, "getTimetable", {
+            "id": person_id, "type": person_type, "startDate": sd, "endDate": ed,
+        })
+        if klasse_id and not chunk:
+            chunk = _safe_rpc(s, url, "getTimetable", {
+                "id": klasse_id, "type": 1, "startDate": sd, "endDate": ed,
+            })
+        all_periods.extend(chunk or [])
+        cursor += datetime.timedelta(weeks=CHUNK_WEEKS)
+
+    try:
+        _rpc(s, url, "logout")
+    except Exception:
+        pass
+    return _count_scheduled_minutes(all_periods, start_date, end_date, datetime.date.today())
+
+
+def get_scheduled_hours_cached(user_id: int, server: str, school: str,
+                                username: str, password: str,
+                                start_date: datetime.date,
+                                end_date: datetime.date) -> tuple:
+    """Gibt (soll_bis_heute, soll_schuljahr, warnung_oder_None) zurück."""
+    cache_key = (user_id, "scheduled", start_date.isoformat(), end_date.isoformat())
+    cached    = _cache.get(cache_key)
+    if cached:
+        age = (datetime.datetime.now() - cached["ts"]).total_seconds()
+        if age < CACHE_TTL:
+            return cached["until_today"], cached["full_year"], None
+    try:
+        until_today, full_year = fetch_scheduled_hours(
+            server, school, username, password, start_date, end_date,
+        )
+        _cache[cache_key] = {
+            "until_today": until_today,
+            "full_year":   full_year,
+            "ts":          datetime.datetime.now(),
+        }
+        return until_today, full_year, None
+    except WebUntisError as e:
+        if cached:
+            return cached["until_today"], cached["full_year"], f"Aktualisierung fehlgeschlagen: {e}"
+        return 0, 0, str(e)

@@ -1,0 +1,225 @@
+{% extends "base.html" %}
+{% block title %}Abwesenheit{% endblock %}
+{% block page_title %}Abwesenheit{% endblock %}
+
+{% block content %}
+
+{% if not configured %}
+<div class="empty-state">
+  <i data-lucide="user-x"></i>
+  <p>WebUntis-Zugangsdaten noch nicht eingerichtet.</p>
+  <a href="/profil" class="btn btn-primary" style="margin-top:8px">
+    <i data-lucide="settings"></i> Jetzt einrichten
+  </a>
+</div>
+
+{% elif error %}
+<div class="alert alert-error" style="margin-bottom:16px">
+  <strong>Abwesenheiten konnten nicht geladen werden:</strong> {{ error }}
+  &nbsp;–&nbsp;<a href="/profil" style="color:inherit;text-decoration:underline">Zugangsdaten prüfen</a>
+</div>
+
+{% else %}
+
+{# ── Topbar ──────────────────────────────────────────────────────────────── #}
+<div class="pruef-topbar" style="margin-bottom:20px">
+  <span class="pruef-source">
+    <i data-lucide="zap"></i>
+    Schuljahr {{ schuljahr_start.strftime('%d.%m.%Y') }} – {{ schuljahr_end.strftime('%d.%m.%Y') }}
+  </span>
+  <form method="POST" action="/abwesenheit/aktualisieren">
+    <button type="submit" class="btn btn-sm" style="background:var(--surface2);color:var(--text-dim)">
+      <i data-lucide="refresh-cw"></i> Aktualisieren
+    </button>
+  </form>
+</div>
+
+{% if warning %}
+<div class="alert alert-info" style="margin-bottom:20px">{{ warning }}</div>
+{% endif %}
+
+{# ── Statistikkarten ─────────────────────────────────────────────────────── #}
+<div class="dashboard-grid" style="margin-bottom:24px">
+  <div class="stat-card accent-blue">
+    <div class="stat-icon"><i data-lucide="list"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ summary.total }}</div>
+      <div class="stat-label">Einträge gesamt</div>
+    </div>
+  </div>
+  <div class="stat-card accent-green">
+    <div class="stat-icon"><i data-lucide="check-circle"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ summary.excused }}</div>
+      <div class="stat-label">Entschuldigt</div>
+    </div>
+  </div>
+  <div class="stat-card accent-orange">
+    <div class="stat-icon"><i data-lucide="alert-circle"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ summary.unexcused }}</div>
+      <div class="stat-label">Unentschuldigt</div>
+    </div>
+  </div>
+  <div class="stat-card accent-purple">
+    <div class="stat-icon"><i data-lucide="clock"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ summary.total_time }}</div>
+      <div class="stat-label">Gesamtzeit</div>
+    </div>
+  </div>
+</div>
+
+{# ── BAföG + Aufschlüsselung (nebeneinander) ─────────────────────────────── #}
+<div class="abs-side-grid" style="margin-bottom:24px">
+
+  <div class="widget">
+    <div class="widget-header">
+      <i data-lucide="shield-check"></i>
+      <span>BAföG Status</span>
+      <span class="bafog-header-info" data-tooltip="Automatisch berechnet – nicht offiziell. Abwesenheiten während Freistunden oder Fehlerfassungen können die Quote verfälschen.">
+        <i data-lucide="alert-circle"></i>
+      </span>
+    </div>
+    <div class="widget-body">
+      {% if bafog %}
+      <div class="bafog-bars">
+
+        <div class="bafog-bar-wrap">
+          <div class="bafog-pct" style="color:{{ bafog.color_now }}">{{ bafog.pct_now_str }}</div>
+          <div class="bafog-track">
+            <div class="bafog-fill" data-height="{{ bafog.bar_now }}"
+                 style="height:0;background:{{ bafog.color_now }}"></div>
+          </div>
+          <div class="bafog-label">
+            Bis heute
+            <span class="bafog-info" data-tooltip="Soll-Stunden bis heute: {{ bafog.soll_now_str }}">
+              <i data-lucide="info"></i>
+            </span>
+          </div>
+        </div>
+
+        <div class="bafog-separator"></div>
+
+        <div class="bafog-bar-wrap">
+          <div class="bafog-pct" style="color:{{ bafog.color_year }}">{{ bafog.pct_year_str }}</div>
+          <div class="bafog-track">
+            <div class="bafog-fill" data-height="{{ bafog.bar_year }}"
+                 style="height:0;background:{{ bafog.color_year }}"></div>
+          </div>
+          <div class="bafog-label">
+            Schuljahr
+            <span class="bafog-info" data-tooltip="Soll-Stunden Schuljahr: {{ bafog.soll_year_str }}">
+              <i data-lucide="info"></i>
+            </span>
+          </div>
+        </div>
+
+      </div>
+      <div class="bafog-scale-note">0 % ──────────────────── 30 %</div>
+      <script>
+        (function () {
+          document.querySelectorAll('.bafog-fill').forEach(function (el) {
+            var h = el.dataset.height;
+            requestAnimationFrame(function () {
+              requestAnimationFrame(function () {
+                el.style.height = h + '%';
+              });
+            });
+          });
+        })();
+      </script>
+      {% else %}
+      <div style="text-align:center;padding:24px 0;color:var(--text-muted);font-size:0.8rem">
+        <i data-lucide="loader" style="width:18px;height:18px;margin-bottom:8px;display:block;margin-inline:auto"></i>
+        Soll-Stunden werden beim ersten Aufruf aus dem Stundenplan berechnet.<br>
+        Seite kurz neu laden.
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if summary.by_reason %}
+  <div class="widget">
+    <div class="widget-header">
+      <i data-lucide="bar-chart-2"></i>
+      <span>Aufschlüsselung nach Grund</span>
+    </div>
+    <div class="widget-body">
+      <div class="abs-reasons">
+        {% for reason, data in summary.by_reason %}
+        <div class="abs-reason-row">
+          <span class="abs-reason-name">{{ reason }}</span>
+          <div class="abs-reason-track">
+            <div class="abs-reason-fill"
+                 style="width: {{ (data.count / summary.max_count * 100) | int }}%"></div>
+          </div>
+          <span class="abs-reason-count mono">{{ data.count }}×</span>
+          {% if data.minutes > 0 %}
+          <span class="abs-reason-time">{{ fmt_minutes(data.minutes) }}</span>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+{# ── Detailliste ─────────────────────────────────────────────────────────── #}
+{% if absences %}
+<div class="section-label">Alle Einträge</div>
+<div class="pruef-list">
+  {% for a in absences %}
+  <div class="pruef-item abs-item{% if not a.is_excused %} abs-item--unexcused{% endif %}">
+
+    <div class="pruef-date">
+      <span class="pruef-wd">{{ a.wochentag }}</span>
+      <span class="pruef-day">{{ a.datum.strftime('%d.%m.') }}</span>
+      <span class="pruef-wd" style="margin-top:2px">{{ a.datum.strftime('%Y') }}</span>
+    </div>
+
+    <div class="pruef-main">
+      <div class="pruef-fach" style="gap:10px">
+        {{ a.reason }}
+        {% if a.is_excused %}
+        <span class="abs-status-badge abs-status-badge--ok">
+          <i data-lucide="check"></i> Entschuldigt
+        </span>
+        {% else %}
+        <span class="abs-status-badge abs-status-badge--warn">
+          <i data-lucide="alert-triangle"></i> Unentschuldigt
+        </span>
+        {% endif %}
+      </div>
+      {% if a.text %}
+      <div class="pruef-meta">
+        <span><i data-lucide="message-square"></i> {{ a.text }}</span>
+      </div>
+      {% endif %}
+    </div>
+
+    <div style="display:flex;align-items:center;gap:12px;margin-left:auto;flex-shrink:0">
+      {% if a.start_time %}
+      <span class="pruef-countdown mono" style="font-size:0.8rem">
+        {{ a.start_time }}{% if a.end_time %} – {{ a.end_time }}{% endif %}
+      </span>
+      {% endif %}
+      {% if a.minutes > 0 %}
+      <span class="abs-duration">{{ fmt_minutes(a.minutes) }}</span>
+      {% endif %}
+    </div>
+
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state" style="margin-top:32px">
+  <i data-lucide="check-circle"></i>
+  <p>Keine Abwesenheiten in diesem Schuljahr.</p>
+</div>
+{% endif %}
+
+{% endif %}
+{% endblock %}

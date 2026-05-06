@@ -1052,6 +1052,219 @@ a.sp-pruef-pill:hover { filter: brightness(1.2); }
 
 .sp-cell--cancelled { background: rgba(247,95,95,0.06) !important; }
 
+/* ── Abwesenheit ─────────────────────────────────────────────────────────── */
+.abs-reasons { display: flex; flex-direction: column; gap: 10px; }
+.abs-reason-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+}
+.abs-reason-name {
+  min-width: 130px;
+  color: var(--text-dim);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.abs-reason-track {
+  flex: 1;
+  height: 6px;
+  background: var(--border2);
+  border-radius: 99px;
+  overflow: hidden;
+}
+.abs-reason-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--blue), var(--purple));
+  border-radius: 99px;
+  transition: width 0.4s ease;
+}
+.abs-reason-count {
+  min-width: 28px;
+  text-align: right;
+  font-size: 0.8rem;
+  color: var(--text);
+  font-weight: 700;
+}
+.abs-reason-time {
+  min-width: 70px;
+  text-align: right;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.abs-item--unexcused { border-left: 3px solid var(--orange); }
+
+.abs-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 99px;
+  flex-shrink: 0;
+}
+.abs-status-badge i { width: 9px; height: 9px; }
+.abs-status-badge--ok {
+  background: rgba(61,214,140,0.12);
+  color: var(--green);
+  border: 1px solid rgba(61,214,140,0.25);
+}
+.abs-status-badge--warn {
+  background: rgba(245,156,61,0.12);
+  color: var(--orange);
+  border: 1px solid rgba(245,156,61,0.25);
+}
+
+.abs-duration {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+/* ── Abwesenheit Seiten-Grid (BAföG + Aufschlüsselung) ──────────────────── */
+.abs-side-grid {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 16px;
+  align-items: stretch;
+}
+.abs-side-grid > .widget {
+  height: 100%;
+}
+@media (max-width: 700px) {
+  .abs-side-grid { grid-template-columns: 1fr; }
+}
+
+/* ── BAföG-Statusbalken ──────────────────────────────────────────────────── */
+.bafog-bars {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 40px;
+  padding: 4px 0 12px;
+}
+.bafog-bar-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.bafog-pct {
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1;
+}
+.bafog-track {
+  width: 56px;
+  height: 168px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  position: relative;
+  overflow: hidden;
+}
+.bafog-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  border-radius: var(--radius-sm);
+  transition: height 0.9s cubic-bezier(0.34, 1.56, 0.64, 1);
+  opacity: 0.85;
+}
+.bafog-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-align: center;
+}
+.bafog-info {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-muted);
+  cursor: default;
+}
+.bafog-info i { width: 10px; height: 10px; }
+.bafog-info::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: calc(100% + 7px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  white-space: nowrap;
+  color: var(--text);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 10;
+}
+.bafog-info:hover::after { opacity: 1; }
+.bafog-separator {
+  width: 1px;
+  height: 100px;
+  background: var(--border);
+  align-self: center;
+}
+.bafog-header-info {
+  margin-left: auto;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-muted);
+  cursor: default;
+}
+.bafog-header-info i { width: 13px; height: 13px; }
+.bafog-header-info::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  font-size: 0.72rem;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: normal;
+  width: 260px;
+  color: var(--text-dim);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 20;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.bafog-header-info:hover::after { opacity: 1; }
+.bafog-scale-note {
+  text-align: center;
+  font-size: 0.62rem;
+  font-family: var(--font-mono);
+  color: var(--text-muted);
+  margin-top: 4px;
+  letter-spacing: 0.04em;
+  opacity: 0.6;
+}
+
 /* ── Prüfungsliste ───────────────────────────────────────────────────────── */
 .pruef-topbar {
   display: flex;
