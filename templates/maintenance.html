@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ server_name }} – Wartung</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+</head>
+<body class="login-body">
+
+  <div class="login-card" style="text-align:center;gap:20px">
+
+    <div style="display:grid;place-items:center;width:64px;height:64px;
+                background:linear-gradient(135deg,var(--blue),var(--purple));
+                border-radius:var(--radius);margin:0 auto">
+      <i data-lucide="wrench" style="width:28px;height:28px;color:#fff"></i>
+    </div>
+
+    <div>
+      <h1 class="login-heading">Wartungsmodus</h1>
+      <p class="login-sub">{{ server_name }}</p>
+    </div>
+
+    <p style="font-size:0.9rem;color:var(--text-muted);line-height:1.6">
+      {{ message }}
+    </p>
+
+    <a href="/logout" class="btn" style="background:var(--surface2);color:var(--text-dim);justify-content:center">
+      <i data-lucide="log-out"></i> Abmelden
+    </a>
+
+  </div>
+
+  <script>lucide.createIcons();</script>
+</body>
+</html>

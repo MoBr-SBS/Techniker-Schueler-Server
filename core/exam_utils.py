@@ -13,9 +13,14 @@ _RANGE_FUTURE = 180
 
 
 def _schuljahr_beginn(today: datetime.date) -> datetime.date:
-    """Gibt den 1. September des aktuellen Schuljahres zurück."""
-    year = today.year if today.month >= 9 else today.year - 1
-    return datetime.date(year, 9, 1)
+    raw = queries.get_app_setting("schuljahr_beginn", "09-01")
+    try:
+        monat, tag = int(raw[:2]), int(raw[3:5])
+    except (ValueError, IndexError):
+        monat, tag = 9, 1
+    started = today.month > monat or (today.month == monat and today.day >= tag)
+    year = today.year if started else today.year - 1
+    return datetime.date(year, monat, tag)
 
 
 def load_webuntis_exams(user_id, today):

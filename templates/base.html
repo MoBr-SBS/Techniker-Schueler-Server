@@ -8,10 +8,14 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  {% if favicon_url %}<link rel="icon" href="{{ favicon_url }}">{% endif %}
+  {% if accent_color %}<style>:root,[data-theme="light"]{--accent:{{ accent_color }};--blue:{{ accent_color }}}</style>{% endif %}
   <script>
     (function(){
-      var t = localStorage.getItem('theme');
-      if (t !== 'dark') document.documentElement.setAttribute('data-theme','light');
+      var stored = localStorage.getItem('theme');
+      var def = '{{ default_theme }}';
+      var theme = stored !== null ? stored : def;
+      if (theme === 'light') document.documentElement.setAttribute('data-theme','light');
     })();
   </script>
 </head>
@@ -19,9 +23,15 @@
 
   <aside class="sidebar">
     <div class="sidebar-logo">
+      {% if logo_url %}
+      <div class="logo-icon logo-icon--img">
+        <img src="{{ logo_url }}" alt="Logo" class="logo-img">
+      </div>
+      {% else %}
       <div class="logo-icon">
         <i data-lucide="server"></i>
       </div>
+      {% endif %}
       <span class="logo-text">{{ server_name }}</span>
     </div>
 
@@ -89,6 +99,11 @@
     </header>
 
     <div class="content">
+      {% if is_admin and maintenance_mode %}
+      <div class="alert alert-info" style="margin-bottom:12px">
+        <i data-lucide="wrench"></i> <strong>Wartungsmodus aktiv</strong> – Normale Benutzer sehen eine Wartungsseite.
+      </div>
+      {% endif %}
       {% with messages = get_flashed_messages(with_categories=true) %}
       {% if messages %}
       <div class="flash-stack">

@@ -41,21 +41,47 @@ def create_app(config: Config = None) -> Flask:
     def require_login():
         if request.endpoint is None:
             return
-        public = {"auth.login", "auth.logout", "static"}
+        public = {"auth.login", "auth.logout", "auth.register", "static"}
         if request.endpoint not in public and "user_id" not in session:
             return redirect(url_for("auth.login"))
+        if ("user_id" in session and not session.get("is_admin")
+                and request.endpoint not in public):
+            from core.queries import get_app_setting
+            if get_app_setting("maintenance_mode") == "1":
+                from flask import render_template as _rt
+                return _rt("maintenance.html",
+                    server_name=get_app_setting("server_name") or app.config["SERVER_NAME_DISPLAY"],
+                    message=get_app_setting("maintenance_message") or "Der Server wird gerade gewartet.")
 
     @app.context_processor
     def inject_globals():
         import datetime
         from core.nav import NAV_ITEMS
+        from core.queries import get_app_setting
+        from flask import url_for as _uf
+
+        db_name = get_app_setting("server_name")
+        server_name = db_name if db_name else app.config["SERVER_NAME_DISPLAY"]
+
+        logo_file = get_app_setting("logo_filename")
+        logo_url  = _uf("static", filename=f"uploads/{logo_file}") if logo_file else None
+
+        fav_file = get_app_setting("favicon_filename")
+        favicon_url = _uf("static", filename=f"uploads/{fav_file}") if fav_file else None
+
         return {
-            "current_user": session.get("username"),
-            "is_admin":     session.get("is_admin", False),
-            "nav":          NAV_ITEMS,
-            "server_name":  app.config["SERVER_NAME_DISPLAY"],
-            "session":      session,
-            "timedelta":    datetime.timedelta,
+            "current_user":       session.get("username"),
+            "is_admin":           session.get("is_admin", False),
+            "nav":                NAV_ITEMS,
+            "server_name":        server_name,
+            "session":            session,
+            "timedelta":          datetime.timedelta,
+            "accent_color":       get_app_setting("accent_color"),
+            "default_theme":      get_app_setting("default_theme", "dark"),
+            "logo_url":           logo_url,
+            "favicon_url":        favicon_url,
+            "maintenance_mode":   get_app_setting("maintenance_mode") == "1",
+            "allow_registration": get_app_setting("allow_registration") == "1",
         }
 
     return app

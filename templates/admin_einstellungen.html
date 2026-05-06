@@ -5,8 +5,173 @@
 {% block content %}
 <div class="page-cols">
 
-  <div>
-    <div class="section-label">WebUntis-Konfiguration</div>
+  <div style="flex:1;min-width:0">
+
+    <!-- ── Branding ──────────────────────────────────────────── -->
+    <div class="section-label" id="branding">Branding</div>
+    <div class="widget" style="margin-bottom:16px">
+      <div class="widget-body">
+        <form method="POST" action="/admin/einstellungen/branding"
+              enctype="multipart/form-data" class="vform">
+
+          <label>Server-Name
+            <input type="text" name="server_name"
+                   value="{{ s.get('server_name', '') }}"
+                   placeholder="z. B. Techniker-Server">
+            <span class="form-hint">Wird in der Seitenleiste und im Browser-Tab angezeigt.</span>
+          </label>
+
+          <label>Logo
+            {% if logo_url %}
+            <div style="margin-bottom:8px;display:flex;align-items:center;gap:12px">
+              <img src="{{ logo_url }}" alt="Aktuelles Logo"
+                   style="max-height:48px;max-width:160px;border-radius:var(--radius-sm);border:1px solid var(--border)">
+              <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;cursor:pointer;font-weight:400">
+                <input type="checkbox" name="logo_delete"> Logo entfernen
+              </label>
+            </div>
+            {% endif %}
+            <input type="file" name="logo" accept="image/*">
+            <span class="form-hint">PNG, JPG, SVG, WebP – wird oben links angezeigt.</span>
+          </label>
+
+          <label>Favicon
+            {% if favicon_url %}
+            <div style="margin-bottom:8px;display:flex;align-items:center;gap:12px">
+              <img src="{{ favicon_url }}" alt="Aktuelles Favicon"
+                   style="width:32px;height:32px;object-fit:contain;border-radius:4px;border:1px solid var(--border)">
+              <label style="display:flex;align-items:center;gap:6px;font-size:0.8rem;cursor:pointer;font-weight:400">
+                <input type="checkbox" name="favicon_delete"> Favicon entfernen
+              </label>
+            </div>
+            {% endif %}
+            <input type="file" name="favicon" accept=".ico,.png,.svg">
+            <span class="form-hint">ICO, PNG oder SVG – erscheint im Browser-Tab.</span>
+          </label>
+
+          <button type="submit" class="btn btn-primary">
+            <i data-lucide="save"></i> Branding speichern
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ── Darstellung ───────────────────────────────────────── -->
+    <div class="section-label" id="darstellung">Darstellung</div>
+    <div class="widget" style="margin-bottom:16px">
+      <div class="widget-body">
+        <form method="POST" action="/admin/einstellungen/darstellung" class="vform">
+
+          <label>Akzentfarbe
+            <div style="display:flex;align-items:center;gap:12px">
+              <input type="color" name="accent_color"
+                     value="{{ s.get('accent_color', '#4f8ef7') }}"
+                     style="width:48px;height:36px;padding:2px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface2);cursor:pointer">
+              <span class="mono" style="font-size:0.82rem;color:var(--text-muted)" id="accent-preview">
+                {{ s.get('accent_color', '#4f8ef7') }}
+              </span>
+              {% if s.get('accent_color') %}
+              <button type="button" class="btn btn-sm"
+                      style="background:var(--surface2);color:var(--text-dim)"
+                      onclick="document.querySelector('[name=accent_color]').value='#4f8ef7';document.getElementById('accent-preview').textContent='#4f8ef7'">
+                Zurücksetzen
+              </button>
+              {% endif %}
+            </div>
+            <span class="form-hint">Hauptfarbe für Buttons, Links und Akzente. Standard: #4f8ef7</span>
+          </label>
+
+          <label>Standard-Theme
+            <div style="display:flex;gap:16px;margin-top:6px">
+              <label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer">
+                <input type="radio" name="default_theme" value="dark"
+                       {% if s.get('default_theme','dark') == 'dark' %}checked{% endif %}>
+                <i data-lucide="moon" style="width:15px;height:15px"></i> Dark
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer">
+                <input type="radio" name="default_theme" value="light"
+                       {% if s.get('default_theme') == 'light' %}checked{% endif %}>
+                <i data-lucide="sun" style="width:15px;height:15px"></i> Light
+              </label>
+            </div>
+            <span class="form-hint">Gilt für Nutzer ohne gespeicherte Theme-Präferenz.</span>
+          </label>
+
+          <button type="submit" class="btn btn-primary">
+            <i data-lucide="save"></i> Darstellung speichern
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ── Funktionen ────────────────────────────────────────── -->
+    <div class="section-label" id="funktionen">Funktionen</div>
+    <div class="widget" style="margin-bottom:16px">
+      <div class="widget-body">
+        <form method="POST" action="/admin/einstellungen/funktionen" class="vform">
+
+          <label>Schuljahresbeginn
+            <div style="display:flex;gap:10px;margin-top:6px">
+              <select name="schuljahr_monat" style="flex:1">
+                {% set cur_m = (s.get('schuljahr_beginn','09-01')[:2])|int %}
+                {% for m, name in [(1,'Januar'),(2,'Februar'),(3,'März'),(4,'April'),(5,'Mai'),(6,'Juni'),(7,'Juli'),(8,'August'),(9,'September'),(10,'Oktober'),(11,'November'),(12,'Dezember')] %}
+                <option value="{{ '%02d'|format(m) }}" {% if cur_m == m %}selected{% endif %}>{{ name }}</option>
+                {% endfor %}
+              </select>
+              <select name="schuljahr_tag" style="width:90px">
+                {% set cur_t = (s.get('schuljahr_beginn','09-01')[3:5])|int %}
+                {% for d in range(1, 32) %}
+                <option value="{{ '%02d'|format(d) }}" {% if cur_t == d %}selected{% endif %}>{{ d }}.</option>
+                {% endfor %}
+              </select>
+            </div>
+            <span class="form-hint">Ab diesem Datum beginnt ein neues Schuljahr (Prüfungen, Abwesenheiten). Standard: 1. September</span>
+          </label>
+
+          <div class="toggle-row">
+            <div>
+              <div style="font-size:0.9rem;font-weight:600">Registrierung erlauben</div>
+              <div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px">
+                Nutzer können sich selbst ein Konto anlegen (immer ohne Admin-Rechte).
+              </div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" name="allow_registration"
+                     {% if s.get('allow_registration') == '1' %}checked{% endif %}>
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <div class="toggle-row" style="margin-top:12px">
+            <div>
+              <div style="font-size:0.9rem;font-weight:600">Wartungsmodus</div>
+              <div style="font-size:0.78rem;color:var(--text-muted);margin-top:2px">
+                Sperrt alle normalen Benutzer. Admins haben weiterhin Zugriff.
+              </div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" name="maintenance_mode"
+                     {% if s.get('maintenance_mode') == '1' %}checked{% endif %}
+                     id="maint-toggle">
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+
+          <label id="maint-msg-label" style="{% if s.get('maintenance_mode') != '1' %}display:none{% endif %}">
+            Wartungsmeldung
+            <textarea name="maintenance_message" rows="2"
+                      placeholder="Der Server wird gerade gewartet. Bitte versuche es später erneut.">{{ s.get('maintenance_message','') }}</textarea>
+          </label>
+
+          <button type="submit" class="btn btn-primary">
+            <i data-lucide="save"></i> Funktionen speichern
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ── WebUntis ──────────────────────────────────────────── -->
+    <div class="section-label" id="webuntis">WebUntis-Konfiguration</div>
     <div class="widget" style="margin-bottom:16px">
       <div class="widget-body">
         <p style="font-size:0.82rem;color:var(--text-muted);margin-bottom:16px">
@@ -21,24 +186,18 @@
         </div>
         {% else %}
         <div class="alert alert-info" style="margin-bottom:16px">
-          <i data-lucide="info"></i> Noch nicht konfiguriert – Benutzer können sich noch nicht mit WebUntis verbinden.
+          <i data-lucide="info"></i> Noch nicht konfiguriert.
         </div>
         {% endif %}
 
         <form method="POST" action="/admin/einstellungen/webuntis" class="vform">
           <label>WebUntis-Server
-            <input type="text" name="wu_server"
-              value="{{ wu_server }}"
-              placeholder="z. B. sbs-herzogenaurach.webuntis.com"
-              required>
-            <span class="form-hint">Hostname ohne https://</span>
+            <input type="text" name="wu_server" value="{{ wu_server }}"
+                   placeholder="z. B. sbs-herzogenaurach.webuntis.com" required>
           </label>
-          <label>Schulname (wie in der URL)
-            <input type="text" name="wu_school"
-              value="{{ wu_school }}"
-              placeholder="z. B. sbs-herzogenaurach"
-              required>
-            <span class="form-hint">Entspricht dem <code>?school=</code>-Parameter der API</span>
+          <label>Schulname
+            <input type="text" name="wu_school" value="{{ wu_school }}"
+                   placeholder="z. B. sbs-herzogenaurach" required>
           </label>
           <button type="submit" class="btn btn-primary">
             <i data-lucide="save"></i> Speichern
@@ -47,27 +206,41 @@
       </div>
     </div>
 
-    <div class="section-label mt-20">Schnellzugriff</div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
+  </div>
+
+  <!-- ── Sidebar rechts ───────────────────────────────────────── -->
+  <div style="max-width:280px;min-width:210px">
+
+    <div class="section-label">Schnellzugriff</div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">
       <a href="/admin/benutzer" class="btn btn-sm" style="background:var(--surface2);color:var(--text-dim)">
         <i data-lucide="users"></i> Benutzerverwaltung
       </a>
+      <a href="/admin/server-status" class="btn btn-sm" style="background:var(--surface2);color:var(--text-dim)">
+        <i data-lucide="activity"></i> Server-Status
+      </a>
     </div>
-  </div>
 
-  <div style="max-width:320px">
+    <div class="section-label">Navigation</div>
     <div class="widget sidebar-form">
-      <div class="widget-header">
-        <i data-lucide="info"></i>
-        <span>Hinweise</span>
-      </div>
-      <div class="widget-body" style="font-size:0.82rem;color:var(--text-muted);line-height:1.6">
-        <p>Der <strong>Server</strong> ist der Hostname des WebUntis-Systems deiner Schule.</p>
-        <p style="margin-top:8px">Der <strong>Schulname</strong> findet sich in der WebUntis-URL deiner Schule direkt nach <code>?school=</code>.</p>
-        <p style="margin-top:8px">Nach einer Änderung werden alle Caches geleert. Benutzer müssen ihre Zugangsdaten erneut testen, falls sich der Server geändert hat.</p>
+      <div class="widget-body" style="font-size:0.82rem;color:var(--text-muted);line-height:1.7">
+        <a href="#branding" style="display:block;color:var(--accent)">→ Branding</a>
+        <a href="#darstellung" style="display:block;color:var(--accent)">→ Darstellung</a>
+        <a href="#funktionen" style="display:block;color:var(--accent)">→ Funktionen</a>
+        <a href="#webuntis" style="display:block;color:var(--accent)">→ WebUntis</a>
       </div>
     </div>
+
   </div>
 
 </div>
+
+<script>
+document.querySelector('[name=accent_color]').addEventListener('input', function() {
+  document.getElementById('accent-preview').textContent = this.value;
+});
+document.getElementById('maint-toggle').addEventListener('change', function() {
+  document.getElementById('maint-msg-label').style.display = this.checked ? '' : 'none';
+});
+</script>
 {% endblock %}

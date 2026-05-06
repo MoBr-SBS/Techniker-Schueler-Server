@@ -1,9 +1,32 @@
+import os
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash
 from werkzeug.security import generate_password_hash
+from werkzeug.utils import secure_filename
 from core import queries
 from core.webuntis_client import fetch_timetable, WebUntisError, clear_all_caches
 
 bp = Blueprint("admin", __name__)
+
+_UPLOAD_DIR = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+    "static", "uploads"
+)
+_IMAGE_EXTS   = {"png", "jpg", "jpeg", "gif", "svg", "webp"}
+_FAVICON_EXTS = {"ico", "png", "svg"}
+
+
+def _save_upload(file_field, name, allowed_exts):
+    f = request.files.get(file_field)
+    if not f or f.filename == "":
+        return None
+    ext = f.filename.rsplit(".", 1)[-1].lower() if "." in f.filename else ""
+    if ext not in allowed_exts:
+        flash(f"Ungültiges Dateiformat für {file_field} (erlaubt: {', '.join(allowed_exts)}).", "error")
+        return None
+    filename = f"{name}.{ext}"
+    os.makedirs(_UPLOAD_DIR, exist_ok=True)
+    f.save(os.path.join(_UPLOAD_DIR, filename))
+    return filename
 
 
 def _require_admin():
@@ -69,11 +92,13 @@ def einstellungen():
     if guard:
         return guard
     server, school = queries.get_webuntis_config()
+    s = queries.get_all_app_settings()
     return render_template(
         "admin_einstellungen.html",
         page_id="einstellungen",
         wu_server=server,
         wu_school=school,
+        s=s,
     )
 
 
@@ -97,3 +122,83 @@ def save_webuntis_config():
     clear_all_caches()
     flash(f"WebUntis-Konfiguration gespeichert: {server} / {school}", "success")
     return redirect(url_for("admin.einstellungen"))
+
+
+@bp.route("/admin/einstellungen/branding", methods=["POST"])
+def save_branding():
+    guard = _require_admin()
+    if guard:
+        return guard
+
+    name = request.form.get("server_name", "").strip()
+    if name:
+        queries.set_app_setting("server_name", name)
+
+    logo_file = _save_upload("logo", "logo", _IMAGE_EXTS)
+    if logo_file:
+        queries.set_app_setting("logo_filename", logo_file)
+    if request.form.get("logo_delete"):
+        queries.set_app_setting("logo_filename", "")
+        _delete_upload("logo")
+
+    fav_file = _save_upload("favicon", "favicon", _FAVICON_EXTS)
+    if fav_file:
+        queries.set_app_setting("favicon_filename", fav_file)
+    if request.form.get("favicon_delete"):
+        queries.set_app_setting("favicon_filename", "")
+        _delete_upload("favicon")
+
+    flash("Branding gespeichert.", "success")
+    return redirect(url_for("admin.einstellungen") + "#branding")
+
+
+@bp.route("/admin/einstellungen/darstellung", methods=["POST"])
+def save_darstellung():
+    guard = _require_admin()
+    if guard:
+        return guard
+
+    accent = request.form.get("accent_color", "").strip()
+    if accent:
+        queries.set_app_setting("accent_color", accent)
+    else:
+        queries.set_app_setting("accent_color", "")
+
+    theme = request.form.get("default_theme", "dark")
+    if theme not in ("dark", "light"):
+        theme = "dark"
+    queries.set_app_setting("default_theme", theme)
+
+    flash("Darstellung gespeichert.", "success")
+    return redirect(url_for("admin.einstellungen") + "#darstellung")
+
+
+@bp.route("/admin/einstellungen/funktionen", methods=["POST"])
+def save_funktionen():
+    guard = _require_admin()
+    if guard:
+        return guard
+
+    monat = request.form.get("schuljahr_monat", "9").zfill(2)
+    tag   = request.form.get("schuljahr_tag",   "1").zfill(2)
+    queries.set_app_setting("schuljahr_beginn", f"{monat}-{tag}")
+
+    queries.set_app_setting("allow_registration",
+                            "1" if request.form.get("allow_registration") else "0")
+    queries.set_app_setting("maintenance_mode",
+                            "1" if request.form.get("maintenance_mode") else "0")
+    msg = request.form.get("maintenance_message", "").strip()
+    queries.set_app_setting("maintenance_message", msg)
+
+    flash("Funktionen gespeichert.", "success")
+    return redirect(url_for("admin.einstellungen") + "#funktionen")
+
+
+def _delete_upload(name):
+    for ext in list(_IMAGE_EXTS | _FAVICON_EXTS):
+        path = os.path.join(_UPLOAD_DIR, f"{name}.{ext}")
+        if os.path.exists(path):
+            try:
+                os.remove(path)
+            except OSError:
+                pass

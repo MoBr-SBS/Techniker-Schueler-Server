@@ -365,6 +365,11 @@ def set_app_setting(key: str, value: str):
     db.commit()
 
 
+def get_all_app_settings() -> dict:
+    rows = get_db().execute("SELECT key, value FROM app_settings").fetchall()
+    return {row["key"]: row["value"] for row in rows}
+
+
 def get_webuntis_config() -> tuple[str, str]:
     """Gibt (server, school) aus den globalen Einstellungen zurück."""
     return (

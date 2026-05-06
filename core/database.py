@@ -141,3 +141,5 @@ def init_db():
 def init_app(app):
     app.teardown_appcontext(close_db)
     init_db()
+    uploads = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "static", "uploads")
+    os.makedirs(uploads, exist_ok=True)

@@ -12,9 +12,15 @@ bp = Blueprint("abwesenheit", __name__)
 
 def _schuljahr_range() -> tuple[datetime.date, datetime.date]:
     today = datetime.date.today()
-    if today.month >= 9:
-        return datetime.date(today.year, 9, 1), datetime.date(today.year + 1, 7, 31)
-    return datetime.date(today.year - 1, 9, 1), datetime.date(today.year, 7, 31)
+    raw = queries.get_app_setting("schuljahr_beginn", "09-01")
+    try:
+        monat, tag = int(raw[:2]), int(raw[3:5])
+    except (ValueError, IndexError):
+        monat, tag = 9, 1
+    started = today.month > monat or (today.month == monat and today.day >= tag)
+    if started:
+        return datetime.date(today.year, monat, tag), datetime.date(today.year + 1, 7, 31)
+    return datetime.date(today.year - 1, monat, tag), datetime.date(today.year, 7, 31)
 
 
 def _fmt_minutes(mins: int) -> str:
