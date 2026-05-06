@@ -1,47 +1,184 @@
 {% extends "base.html" %}
-
 {% block title %}Dashboard{% endblock %}
 {% block page_title %}Dashboard{% endblock %}
 
 {% block content %}
-<div class="dashboard-grid">
 
-  {% for s in stats %}
-  <div class="stat-card accent-{{ s.color }}">
-    <div class="stat-icon"><i data-lucide="{{ s.icon }}"></i></div>
+{# ── Stat-Karten ─────────────────────────────────────────────────────────────── #}
+<div class="db-stats">
+
+  {# Nächste Prüfung #}
+  <a href="/pruefungen" class="stat-card stat-card--link accent-{% if next_exam %}{% if next_exam.days <= 3 %}red{% elif next_exam.days <= 7 %}orange{% else %}blue{% endif %}{% else %}blue{% endif %}">
+    <div class="stat-icon"><i data-lucide="clipboard-list"></i></div>
     <div class="stat-body">
-      <div class="stat-value">{{ s.value }}</div>
-      <div class="stat-label">{{ s.label }}</div>
+      {% if next_exam %}
+      <div class="stat-value">
+        {% if next_exam.days == 0 %}Heute
+        {% elif next_exam.days == 1 %}Morgen
+        {% else %}{{ next_exam.days }} Tage
+        {% endif %}
+      </div>
+      <div class="stat-label">
+        {{ next_exam.fach }}
+        <span class="stat-sublabel">{{ next_exam.datum.strftime('%d.%m.') }}</span>
+      </div>
+      {% else %}
+      <div class="stat-value">–</div>
+      <div class="stat-label">Keine Prüfung</div>
+      {% endif %}
     </div>
-  </div>
-  {% endfor %}
+  </a>
 
-  <div class="widget span-2">
-    <div class="widget-header">
-      <i data-lucide="activity"></i>
-      <span>Aktivitätsverlauf</span>
+  {# Noten-Durchschnitt #}
+  <a href="/noten" class="stat-card stat-card--link accent-{{ note_color }}">
+    <div class="stat-icon"><i data-lucide="award"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">
+        {% if gesamt_schnitt %}{{ "%.2f"|format(gesamt_schnitt) }}{% else %}–{% endif %}
+      </div>
+      <div class="stat-label">Noten-Ø gesamt</div>
     </div>
-    <div class="widget-body placeholder-chart">
-      <div class="chart-bars">
-        {% for h in [40, 65, 30, 80, 55, 90, 45, 70, 60, 85, 50, 75] %}
-        <div class="bar" style="--h: {{ h }}%"></div>
+  </a>
+
+  {# Offene Bewertungen #}
+  <a href="/noten" class="stat-card stat-card--link accent-{% if offene_bewertungen > 0 %}orange{% else %}green{% endif %}">
+    <div class="stat-icon"><i data-lucide="{% if offene_bewertungen > 0 %}edit{% else %}check-circle{% endif %}"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ offene_bewertungen }}</div>
+      <div class="stat-label">Offen{% if offene_bewertungen != 1 %}e{% endif %} Bewertung{% if offene_bewertungen != 1 %}en{% endif %}</div>
+    </div>
+  </a>
+
+  {# Prüfungen diese Woche #}
+  <a href="/pruefungen" class="stat-card stat-card--link accent-{% if pruef_diese_woche > 0 %}purple{% else %}blue{% endif %}">
+    <div class="stat-icon"><i data-lucide="calendar-check"></i></div>
+    <div class="stat-body">
+      <div class="stat-value">{{ pruef_diese_woche }}</div>
+      <div class="stat-label">Prüfung{% if pruef_diese_woche != 1 %}en{% endif %} diese Woche</div>
+    </div>
+  </a>
+
+</div>
+
+{# ── Hauptgrid ───────────────────────────────────────────────────────────────── #}
+<div class="db-main-grid">
+
+  {# Heutiger Stundenplan #}
+  <div class="widget db-widget-today">
+    <div class="widget-header">
+      <i data-lucide="calendar"></i>
+      <span>{{ heute_label }}</span>
+      <span class="widget-header-sub">{{ today.strftime('%d.%m.%Y') }}</span>
+    </div>
+    <div class="widget-body">
+      {% if is_weekend %}
+      <div class="db-empty-small">
+        <i data-lucide="coffee"></i>
+        <span>Wochenende</span>
+      </div>
+      {% elif sp_not_configured %}
+      <div class="db-empty-small">
+        <i data-lucide="zap"></i>
+        <span>WebUntis nicht eingerichtet</span>
+      </div>
+      {% elif heute_slots %}
+      <div class="db-today-list">
+        {% for slot in heute_slots %}
+        <div class="db-today-row">
+          <div class="db-today-stunde-col">
+            <span class="db-today-stunde">{{ slot.stunde }}.</span>
+            {% if slot.start %}<span class="db-today-time">{{ slot.start }}</span>{% endif %}
+          </div>
+          <div class="db-today-fach">
+            <span>{{ slot.fach }}</span>
+            <span class="db-today-meta">
+              {% if slot.lehrer %}{{ slot.lehrer }}{% endif %}
+              {% if slot.lehrer and slot.raum %} · {% endif %}
+              {% if slot.raum %}{{ slot.raum }}{% endif %}
+            </span>
+          </div>
+        </div>
         {% endfor %}
       </div>
+      {% else %}
+      <div class="db-empty-small">
+        <i data-lucide="calendar-x"></i>
+        <span>Kein Unterricht heute</span>
+      </div>
+      {% endif %}
     </div>
   </div>
 
-  <div class="widget">
+  {# Nächste Prüfungen #}
+  <div class="widget db-widget-exams">
     <div class="widget-header">
-      <i data-lucide="info"></i>
-      <span>Systeminformationen</span>
+      <i data-lucide="clipboard-list"></i>
+      <span>Nächste Prüfungen</span>
+      <a href="/pruefungen" class="widget-header-link">Alle <i data-lucide="arrow-right"></i></a>
     </div>
-    <div class="widget-body info-list">
-      <div class="info-row"><span>Hostname</span><span class="mono">myserver.local</span></div>
-      <div class="info-row"><span>Python</span><span class="mono">3.12</span></div>
-      <div class="info-row"><span>Flask</span><span class="mono">3.x</span></div>
-      <div class="info-row"><span>Port</span><span class="mono">8080</span></div>
+    <div class="widget-body">
+      {% if next_5_exams %}
+      <div class="db-exam-list">
+        {% for exam in next_5_exams %}
+        <div class="db-exam-row {% if exam.days <= 3 %}db-exam-row--soon{% endif %}">
+          <div class="db-exam-date">
+            <span class="db-exam-wd">{{ exam.wochentag }}</span>
+            <span class="db-exam-day mono">{{ exam.datum.strftime('%d.%m.') }}</span>
+          </div>
+          <div class="db-exam-info">
+            <span class="db-exam-fach">{{ exam.fach }}</span>
+            <span class="pruef-art-badge pruef-art--{{ exam.art | lower | replace('schulaufgabe','sa') }}">
+              {{ exam.art | replace('Schulaufgabe','SA') }}
+            </span>
+          </div>
+          <span class="db-exam-countdown">
+            {% if exam.days == 0 %}Heute
+            {% elif exam.days == 1 %}Morgen
+            {% else %}{{ exam.days }} Tage
+            {% endif %}
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="db-empty-small">
+        <i data-lucide="calendar-check"></i>
+        <span>Keine bevorstehenden Prüfungen</span>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {# Letzte Noten #}
+  <div class="widget db-widget-noten">
+    <div class="widget-header">
+      <i data-lucide="award"></i>
+      <span>Letzte Noten</span>
+      <a href="/noten" class="widget-header-link">Alle <i data-lucide="arrow-right"></i></a>
+    </div>
+    <div class="widget-body">
+      {% if recent_noten %}
+      <div class="db-noten-list">
+        {% for n in recent_noten %}
+        <div class="db-noten-row">
+          <span class="db-noten-datum mono">{{ n.datum }}</span>
+          <span class="db-noten-fach">{{ n.fach }}</span>
+          <span class="note-val note-col-{{ n.note | int }}">{{ n.note }}</span>
+          {% if n.beschreibung %}
+          <span class="db-noten-desc">{{ n.beschreibung }}</span>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="db-empty-small">
+        <i data-lucide="award"></i>
+        <span>Noch keine Noten eingetragen</span>
+      </div>
+      {% endif %}
     </div>
   </div>
 
 </div>
+
 {% endblock %}

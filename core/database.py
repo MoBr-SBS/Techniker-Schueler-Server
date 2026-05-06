@@ -108,6 +108,25 @@ def init_db():
         db.execute("DROP TABLE _pruef_old")
         db.commit()
 
+    # Migrations: noten table extensions
+    noten_cols = [row[1] for row in db.execute("PRAGMA table_info(noten)").fetchall()]
+    if "exam_key" not in noten_cols:
+        db.execute("ALTER TABLE noten ADD COLUMN exam_key TEXT DEFAULT NULL")
+        db.commit()
+    if "klassen_schnitt" not in noten_cols:
+        db.execute("ALTER TABLE noten ADD COLUMN klassen_schnitt REAL DEFAULT NULL")
+        db.commit()
+    if "user_id" not in noten_cols:
+        db.execute("ALTER TABLE noten ADD COLUMN user_id INTEGER REFERENCES users(id) DEFAULT NULL")
+        db.commit()
+    if "art" not in noten_cols:
+        db.execute("ALTER TABLE noten ADD COLUMN art TEXT DEFAULT 'Ex'")
+        db.commit()
+        # Bestehende Einträge: art aus beschreibung ableiten falls möglich
+        db.execute("UPDATE noten SET art='SA' WHERE beschreibung='SA'")
+        db.execute("UPDATE noten SET art='Ex' WHERE beschreibung='Ex'")
+        db.commit()
+
     if db.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 0:
         from werkzeug.security import generate_password_hash
         db.execute(

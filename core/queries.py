@@ -16,6 +16,13 @@ def get_stundenplan():
     ).fetchall()
 
 
+def get_stundenplan_for_day(wochentag: int):
+    return get_db().execute(
+        "SELECT * FROM stundenplan WHERE wochentag=? ORDER BY stunde",
+        (wochentag,),
+    ).fetchall()
+
+
 def set_stundenplan_slot(wochentag, stunde, fach, lehrer, raum):
     db = get_db()
     db.execute(
@@ -96,19 +103,66 @@ def delete_lernmaterial(test_id, mid):
 
 # ── Noten ─────────────────────────────────────────────────────────────────────
 
-def get_all_noten():
+def get_noten_for_user(user_id):
     return get_db().execute(
-        "SELECT * FROM noten ORDER BY fach, datum DESC"
+        "SELECT * FROM noten WHERE user_id=? ORDER BY fach, datum DESC", (user_id,)
     ).fetchall()
 
 
-def add_note(fach, note, datum, beschreibung):
+def add_note(fach, note, datum, beschreibung, exam_key=None, user_id=None, art="Ex"):
     db = get_db()
     db.execute(
-        "INSERT INTO noten (fach, note, datum, beschreibung) VALUES (?,?,?,?)",
-        (fach, note, datum, beschreibung),
+        "INSERT INTO noten (fach, note, datum, beschreibung, exam_key, user_id, art) VALUES (?,?,?,?,?,?,?)",
+        (fach, note, datum, beschreibung, exam_key, user_id, art),
     )
     db.commit()
+
+
+def update_note(note_id, note, beschreibung, art="Ex"):
+    db = get_db()
+    db.execute(
+        "UPDATE noten SET note=?, beschreibung=?, art=? WHERE id=?",
+        (note, beschreibung, art, note_id),
+    )
+    db.commit()
+
+
+def get_note_by_exam_key_for_user(exam_key: str, user_id: int):
+    return get_db().execute(
+        "SELECT * FROM noten WHERE exam_key=? AND user_id=?", (exam_key, user_id)
+    ).fetchone()
+
+
+def get_graded_exam_keys_for_user(user_id: int) -> set:
+    rows = get_db().execute(
+        "SELECT exam_key FROM noten WHERE user_id=? AND exam_key IS NOT NULL AND exam_key != ''",
+        (user_id,)
+    ).fetchall()
+    return {row["exam_key"] for row in rows}
+
+
+def get_class_avgs_by_exam_keys(exam_keys: set) -> dict:
+    """Returns {exam_key: {'avg': float, 'count': int}} – one entry per user (latest),
+    only for notes that have a user_id."""
+    if not exam_keys:
+        return {}
+    ph = ",".join("?" * len(exam_keys))
+    keys = list(exam_keys)
+    rows = get_db().execute(
+        f"""SELECT exam_key, ROUND(AVG(note), 2) AS avg, COUNT(*) AS cnt
+            FROM noten
+            WHERE exam_key IN ({ph})
+              AND user_id IS NOT NULL
+              AND id IN (
+                  SELECT MAX(id) FROM noten
+                  WHERE exam_key IN ({ph})
+                    AND user_id IS NOT NULL
+                  GROUP BY exam_key, user_id
+              )
+            GROUP BY exam_key""",
+        keys + keys,
+    ).fetchall()
+    return {row["exam_key"]: {"avg": row["avg"], "count": row["cnt"]} for row in rows}
 
 
 def delete_note(note_id):

@@ -3,96 +3,195 @@
 {% block page_title %}Noten{% endblock %}
 
 {% block content %}
-<div class="page-cols">
 
-  <div class="noten-main">
+{# ── Gesamtschnitt ───────────────────────────────────────────────────────────── #}
+{% if gesamt_schnitt %}
+{% set gc = 'green' if gesamt_schnitt <= 2.0 else ('blue' if gesamt_schnitt <= 3.0 else ('orange' if gesamt_schnitt <= 4.0 else 'red')) %}
+<div class="gesamt-schnitt-bar accent-{{ gc }}">
+  <span class="gs-label">Gesamtdurchschnitt</span>
+  <span class="gs-value">Ø {{ "%.2f"|format(gesamt_schnitt) }}</span>
+  <span class="gs-count">aus {{ summaries | sum(attribute='count') }} Note{% if summaries | sum(attribute='count') != 1 %}n{% endif %} in {{ summaries | length }} {% if summaries | length != 1 %}Fächern{% else %}Fach{% endif %}</span>
+</div>
+{% endif %}
 
-    {% if summaries %}
-
-    <div class="section-label">Fachübersicht</div>
-    <div class="noten-summary-grid">
-      {% for s in summaries %}
-      <div class="noten-summary-card accent-{{ s.color }}">
-        <div class="ns-fach">{{ s.fach }}</div>
-        <div class="ns-schnitt">Ø {{ "%.2f"|format(s.schnitt) }}</div>
-        <div class="ns-count">{{ s.count }} Note{% if s.count != 1 %}n{% endif %}</div>
-      </div>
-      {% endfor %}
+{# ── Fachübersicht ───────────────────────────────────────────────────────────── #}
+{% if summaries %}
+<div class="section-label {% if gesamt_schnitt %}mt-20{% endif %}">Fachübersicht</div>
+<div class="noten-summary-grid">
+  {% for s in summaries %}
+  <div class="noten-summary-card accent-{{ s.color }}">
+    <div class="ns-fach">{{ s.fach }}</div>
+    <div class="ns-schnitt">Ø {{ "%.2f"|format(s.schnitt) }}</div>
+    <div class="ns-sub">
+      {% if s.avg_sa is not none %}<span>SA&nbsp;{{ "%.2f"|format(s.avg_sa) }}</span>{% endif %}
+      {% if s.avg_sa is not none and s.avg_ex is not none %}<span class="ns-sep">·</span>{% endif %}
+      {% if s.avg_ex is not none %}<span>Ex&nbsp;{{ "%.2f"|format(s.avg_ex) }}</span>{% endif %}
     </div>
-
-    {% for s in summaries %}
-    <div class="section-label mt-20">{{ s.fach }}</div>
-    <table class="noten-table">
-      <thead>
-        <tr>
-          <th>Datum</th>
-          <th>Note</th>
-          <th>Beschreibung</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for note in s.noten %}
-        <tr>
-          <td class="mono">{{ note.datum }}</td>
-          <td class="note-val note-col-{{ note.note|int }}">{{ note.note }}</td>
-          <td class="text-muted">{{ note.beschreibung or '–' }}</td>
-          <td>
-            <form method="POST" action="/noten/delete/{{ note.id }}" style="display:contents">
-              <button type="submit" class="icon-btn icon-btn--danger" title="Löschen">
-                <i data-lucide="trash-2"></i>
-              </button>
-            </form>
-          </td>
-        </tr>
-        {% endfor %}
-        <tr class="schnitt-row">
-          <td colspan="3" class="schnitt-label">Durchschnitt</td>
-          <td class="note-val">Ø {{ "%.2f"|format(s.schnitt) }}</td>
-        </tr>
-      </tbody>
-    </table>
-    {% endfor %}
-
-    {% else %}
-    <div class="empty-state">
-      <i data-lucide="award"></i>
-      <p>Noch keine Noten eingetragen.</p>
-    </div>
-    {% endif %}
-
+    <div class="ns-count">{{ s.count }} Note{% if s.count != 1 %}n{% endif %}</div>
   </div>
+  {% endfor %}
+</div>
 
-  <div class="widget sidebar-form">
-    <div class="widget-header">
-      <i data-lucide="plus-circle"></i>
-      <span>Note eintragen</span>
+{# ── Noten pro Fach ──────────────────────────────────────────────────────────── #}
+{% for s in summaries %}
+<div class="section-label mt-20">{{ s.fach }}</div>
+<table class="noten-table">
+  <thead>
+    <tr>
+      <th>Datum</th>
+      <th>Art</th>
+      <th>Meine Note</th>
+      <th>Klassen-Ø</th>
+      <th>Beschreibung</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for note in s.noten %}
+    <tr>
+      <td class="mono">{{ note.datum }}</td>
+      <td>
+        <span class="pruef-art-badge pruef-art--{{ (note.art or 'ex') | lower }}">
+          {{ note.art or 'Ex' }}
+        </span>
+      </td>
+      <td class="note-val note-col-{{ note.note|int }}">{{ note.note }}</td>
+      <td>
+        {% if note.class_avg %}
+        <span class="klassen-schnitt-cell" title="{{ note.class_count }} Einträge">
+          {{ "%.2f"|format(note.class_avg) }}
+        </span>
+        {% else %}
+        <span class="text-muted">–</span>
+        {% endif %}
+      </td>
+      <td class="text-muted">{{ note.beschreibung or '–' }}</td>
+      <td>
+        <form method="POST" action="/noten/delete/{{ note.id }}" style="display:contents">
+          <button type="submit" class="icon-btn icon-btn--danger" title="Löschen">
+            <i data-lucide="trash-2"></i>
+          </button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+    <tr class="schnitt-row">
+      <td colspan="5" class="schnitt-label">
+        Ø (2×SA + Ex) / 3
+        {% if s.avg_sa is not none and s.avg_ex is not none %}
+        <span style="font-weight:400;opacity:0.7">&nbsp;= (2×{{ "%.2f"|format(s.avg_sa) }} + {{ "%.2f"|format(s.avg_ex) }}) / 3</span>
+        {% endif %}
+      </td>
+      <td class="note-val">Ø {{ "%.2f"|format(s.schnitt) }}</td>
+    </tr>
+  </tbody>
+</table>
+{% endfor %}
+
+{% else %}
+{% if not pending_exams %}
+<div class="empty-state">
+  <i data-lucide="award"></i>
+  <p>Noch keine Noten eingetragen.</p>
+</div>
+{% endif %}
+{% endif %}
+
+{# ── Offene Prüfungsbewertungen ──────────────────────────────────────────────── #}
+{% if pending_exams %}
+<div class="section-label mt-20">Offene Bewertungen</div>
+<div class="pending-exams-list">
+  {% for exam in pending_exams %}
+  <div class="pending-exam-item">
+    <div class="pending-exam-info">
+      <span class="pending-exam-fach">{{ exam.fach }}</span>
+      <span class="pending-exam-date mono">{{ exam.datum.strftime('%d.%m.%Y') }}</span>
+      <span class="pruef-art-badge pruef-art--{{ exam.art | lower | replace('schulaufgabe','sa') }}">
+        {{ exam.art | replace('Schulaufgabe', 'SA') }}
+      </span>
+      {% if exam.source == 'webuntis' %}
+      <span class="pruef-source-badge pruef-source-badge--untis"><i data-lucide="zap"></i> Untis</span>
+      {% else %}
+      <span class="pruef-source-badge pruef-source-badge--manual"><i data-lucide="pencil"></i> Manuell</span>
+      {% endif %}
     </div>
-    <div class="widget-body">
-      <form method="POST" action="/noten/add" class="vform">
-        <label>Fach *
+    <form method="POST" action="/noten/add" class="pending-exam-form">
+      <input type="hidden" name="fach"     value="{{ exam.fach }}">
+      <input type="hidden" name="datum"    value="{{ exam.datum.isoformat() }}">
+      <input type="hidden" name="exam_key" value="{{ exam.exam_key }}">
+      <input type="hidden" name="art"      value="{{ exam.art }}">
+      <input type="text" name="note" placeholder="Meine Note"
+             required inputmode="decimal" class="pending-note-input"
+             autocomplete="off">
+      <button type="submit" class="btn btn-sm btn-primary">
+        <i data-lucide="check"></i> Eintragen
+      </button>
+    </form>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{# ── Manuell eintragen (versteckt) ──────────────────────────────────────────── #}
+<div class="manual-entry-wrap mt-20">
+  <button type="button" class="btn btn-sm manual-entry-toggle" id="manual-toggle"
+          onclick="toggleManualForm()">
+    <i data-lucide="plus" id="manual-toggle-icon"></i>
+    Note manuell eintragen
+  </button>
+  <div id="manual-form-section" style="display:none" class="manual-form-card">
+    <form method="POST" action="/noten/add" class="manual-inline-form">
+      <div class="manual-form-row">
+        <div class="manual-form-field">
+          <label>Fach *</label>
           <input type="text" name="fach" placeholder="z. B. Mathematik"
-            list="fach-list" required>
+                 list="fach-list" required>
           <datalist id="fach-list">
             {% for s in summaries %}
             <option value="{{ s.fach }}">
             {% endfor %}
           </datalist>
-        </label>
-        <label>Note * (1–6)
-          <input type="text" name="note" placeholder="z. B. 2,5" required
-            inputmode="decimal">
-        </label>
-        <label>Datum *
+        </div>
+        <div class="manual-form-field manual-form-field--sm">
+          <label>Art *</label>
+          <select name="art">
+            <option value="Ex">Ex</option>
+            <option value="SA">SA</option>
+          </select>
+        </div>
+        <div class="manual-form-field manual-form-field--sm">
+          <label>Note *</label>
+          <input type="text" name="note" placeholder="2,5" required inputmode="decimal">
+        </div>
+        <div class="manual-form-field manual-form-field--sm">
+          <label>Datum *</label>
           <input type="date" name="datum" value="{{ today }}" required>
-        </label>
-        <label>Beschreibung
+        </div>
+        <div class="manual-form-field">
+          <label>Beschreibung</label>
           <input type="text" name="beschreibung" placeholder="z. B. Mathearbeit">
-        </label>
-        <button type="submit" class="btn btn-primary">Eintragen</button>
-      </form>
-    </div>
+        </div>
+        <div class="manual-form-field manual-form-field--btn">
+          <label>&nbsp;</label>
+          <button type="submit" class="btn btn-primary">Eintragen</button>
+        </div>
+      </div>
+    </form>
   </div>
-
 </div>
+
+<script>
+function toggleManualForm() {
+  var section = document.getElementById('manual-form-section');
+  var icon    = document.getElementById('manual-toggle-icon');
+  if (section.style.display === 'none') {
+    section.style.display = 'block';
+    icon.setAttribute('data-lucide', 'x');
+  } else {
+    section.style.display = 'none';
+    icon.setAttribute('data-lucide', 'plus');
+  }
+  lucide.createIcons();
+}
+</script>
 {% endblock %}

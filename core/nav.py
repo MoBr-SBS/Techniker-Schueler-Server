@@ -11,8 +11,6 @@ NAV_ITEMS = [
     {"id": "pruefungen",      "label": "Prüfungen",        "icon": "clipboard-list",  "url": "/pruefungen"},
     {"id": "abwesenheit",     "label": "Abwesenheit",      "icon": "user-x",          "url": "/abwesenheit"},
     {"id": "noten",            "label": "Noten",            "icon": "award",          "url": "/noten"},
-    {"id": "stats",            "label": "Statistiken",      "icon": "bar-chart-2",    "url": "/stats"},
-    {"id": "settings",         "label": "Einstellungen",    "icon": "settings",       "url": "/settings"},
     {"id": "benutzer",         "label": "Benutzer",         "icon": "users",          "url": "/admin/benutzer",      "admin_only": True},
     {"id": "einstellungen",    "label": "Server-Config",    "icon": "sliders",         "url": "/admin/einstellungen", "admin_only": True},
 ]

@@ -71,7 +71,7 @@ def einstellungen():
     server, school = queries.get_webuntis_config()
     return render_template(
         "admin_einstellungen.html",
-        page_id="benutzer",
+        page_id="einstellungen",
         wu_server=server,
         wu_school=school,
     )

@@ -8,6 +8,12 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  <script>
+    (function(){
+      var t = localStorage.getItem('theme');
+      if (t === 'light') document.documentElement.setAttribute('data-theme','light');
+    })();
+  </script>
 </head>
 <body>
 
@@ -23,7 +29,7 @@
 
     <nav class="sidebar-nav">
       {% for item in nav %}
-      {% if not item.get('admin_only') or is_admin %}
+      {% if not item.get('admin_only') %}
       <a href="{{ item.url }}"
          class="nav-item {% if page_id == item.id %}active{% endif %}">
         <i data-lucide="{{ item.icon }}"></i>
@@ -36,6 +42,24 @@
       {% endfor %}
     </nav>
 
+    {% if is_admin %}
+    <div class="sidebar-admin">
+      <div class="sidebar-admin-label">Admin</div>
+      {% for item in nav %}
+      {% if item.get('admin_only') %}
+      <a href="{{ item.url }}"
+         class="nav-item nav-item--admin {% if page_id == item.id %}active{% endif %}">
+        <i data-lucide="{{ item.icon }}"></i>
+        <span>{{ item.label }}</span>
+        {% if page_id == item.id %}
+        <div class="nav-indicator nav-indicator--admin"></div>
+        {% endif %}
+      </a>
+      {% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+
     <div class="sidebar-footer">
       <div class="status-dot"></div>
       <span class="status-text">Online</span>
@@ -46,6 +70,9 @@
     <header class="topbar">
       <h1 class="page-title">{% block page_title %}{% endblock %}</h1>
       <div class="topbar-right">
+        <button class="theme-toggle" id="theme-toggle" title="Dark/Light Mode">
+          <i data-lucide="sun" id="theme-icon"></i>
+        </button>
         <span class="mono time-display" id="clock"></span>
         {% if current_user %}
         <div class="topbar-user">

@@ -2,77 +2,18 @@ import re
 import datetime
 from flask import Blueprint, render_template, request, redirect, url_for, session
 from core import queries
-from core.encryption import decrypt
-from core.webuntis_client import get_exams_cached, invalidate_exam_cache
+from core.webuntis_client import invalidate_exam_cache
+from core.exam_utils import load_webuntis_exams, load_manual_exams
 from core.nav import NAV_ITEMS
 
 bp = Blueprint("pruefungen", __name__)
-
-_WOCHENTAGE   = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
-_RANGE_PAST   = 60
-_RANGE_FUTURE = 180
-
-
-def _load_webuntis_exams(user_id, today):
-    creds = queries.get_webuntis_credentials(user_id)
-    if not creds:
-        return [], None, False
-
-    start  = today - datetime.timedelta(days=_RANGE_PAST)
-    end    = today + datetime.timedelta(days=_RANGE_FUTURE)
-    server, school = queries.get_webuntis_config()
-
-    exams, warning = get_exams_cached(
-        user_id, server, school,
-        creds["wt_username"],
-        decrypt(creds["wt_password"]),
-        start, end,
-    )
-
-    noted_keys = queries.get_exam_note_keys()
-    result = []
-    for exam in exams:
-        days = (exam["datum"] - today).days
-        e = dict(exam)
-        e["days"]      = days
-        e["wochentag"] = _WOCHENTAGE[exam["datum"].weekday()]
-        e["heute"]     = exam["datum"] == today
-        e["exam_key"]  = queries.make_exam_key(exam["fach"], exam["datum"])
-        e["has_note"]  = e["exam_key"] in noted_keys
-        e["source"]    = "webuntis"
-        result.append(e)
-
-    return result, warning, True
-
-
-def _load_manual_exams(today):
-    noted_keys = queries.get_exam_note_keys()
-    result = []
-    for row in queries.get_all_pruefungen():
-        datum = datetime.date.fromisoformat(row["datum"])
-        days  = (datum - today).days
-        exam_key = queries.make_exam_key(row["fach"], datum)
-        result.append({
-            "id":        row["id"],
-            "fach":      row["fach"],
-            "art":       row["art"],
-            "datum":     datum,
-            "notiz":     row["notiz"] or "",
-            "days":      days,
-            "wochentag": _WOCHENTAGE[datum.weekday()],
-            "heute":     datum == today,
-            "exam_key":  exam_key,
-            "has_note":  exam_key in noted_keys,
-            "source":    "manual",
-        })
-    return result
 
 
 @bp.route("/pruefungen")
 def index():
     today = datetime.date.today()
-    wu_exams, warning, wt_configured = _load_webuntis_exams(session["user_id"], today)
-    manual_exams = _load_manual_exams(today)
+    wu_exams, warning, wt_configured = load_webuntis_exams(session["user_id"], today)
+    manual_exams = load_manual_exams(today)
 
     all_exams = wu_exams + manual_exams
     all_exams.sort(key=lambda e: e["datum"])
