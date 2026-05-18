@@ -104,7 +104,6 @@ def index():
         "noten.html",
         page_id="noten",
         nav=NAV_ITEMS,
-        server_name=current_app.config["SERVER_NAME_DISPLAY"],
         summaries=summaries,
         gesamt_schnitt=gesamt_schnitt,
         today=today.isoformat(),

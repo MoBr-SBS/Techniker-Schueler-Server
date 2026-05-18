@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, current_app
+from flask import Blueprint, render_template
 from core.nav import NAV_ITEMS
 
 bp = Blueprint("settings", __name__)
@@ -9,5 +9,4 @@ def settings():
         "settings.html",
         page_id="settings",
         nav=NAV_ITEMS,
-        server_name=current_app.config["SERVER_NAME_DISPLAY"],
     )

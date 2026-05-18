@@ -104,7 +104,6 @@ def index():
         "dashboard.html",
         page_id="dashboard",
         nav=NAV_ITEMS,
-        server_name=current_app.config["SERVER_NAME_DISPLAY"],
         today=today,
         gesamt_schnitt=gesamt_schnitt,
         note_color=_grade_color(gesamt_schnitt),

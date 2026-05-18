@@ -32,7 +32,6 @@ def index():
             "mein_stundenplan.html",
             page_id="mein_stundenplan",
             nav=NAV_ITEMS,
-            server_name=current_app.config["SERVER_NAME_DISPLAY"],
             configured=False,
         )
 
@@ -135,7 +134,6 @@ def index():
         template,
         page_id="mein_stundenplan",
         nav=NAV_ITEMS,
-        server_name=current_app.config["SERVER_NAME_DISPLAY"],
         configured=True,
         grid=grid,
         periods_info=periods_info,
