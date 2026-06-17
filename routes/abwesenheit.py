@@ -4,7 +4,8 @@ from flask import Blueprint, render_template, request, redirect, url_for, sessio
 from core import queries
 from core.encryption import decrypt_with_key
 from core.webuntis_client import (get_absences_cached, invalidate_absence_cache,
-                                  get_scheduled_hours_cached)
+                                  get_scheduled_hours_cached,
+                                  _count_absent_lesson_minutes)
 from core.nav import NAV_ITEMS
 
 bp = Blueprint("abwesenheit", __name__)
@@ -40,11 +41,11 @@ def _bafog_color(pct: float) -> str:
     return "var(--green)"
 
 
-def _compute_bafog(absence_minutes: int, soll_until_today: int, soll_full_year: int):
+def _compute_bafog(fehl_now: int, fehl_year: int, soll_until_today: int, soll_full_year: int):
     if soll_full_year <= 0:
         return None
-    pct_now  = (absence_minutes / soll_until_today * 100) if soll_until_today > 0 else 0.0
-    pct_year = absence_minutes / soll_full_year * 100
+    pct_now  = (fehl_now  / soll_until_today * 100) if soll_until_today > 0 else 0.0
+    pct_year = (fehl_year / soll_full_year   * 100) if soll_full_year   > 0 else 0.0
     return {
         "pct_now_str":  f"{pct_now:.1f} %",
         "pct_year_str": f"{pct_year:.1f} %",
@@ -107,12 +108,19 @@ def index():
 
     summary = _compute_summary(absences)
 
-    soll_now, soll_year, sched_warn = get_scheduled_hours_cached(
+    soll_now, soll_year, periods, sched_warn = get_scheduled_hours_cached(
         session["user_id"], server, school,
         creds["wt_username"], pw,
         start, end,
     )
-    bafog = _compute_bafog(summary["total_minutes"], soll_now, soll_year)
+    if periods:
+        fehl_now, fehl_year = _count_absent_lesson_minutes(
+            absences, periods, start, end, datetime.date.today(),
+        )
+    else:
+        fehl_now  = summary["total_minutes"]
+        fehl_year = summary["total_minutes"]
+    bafog = _compute_bafog(fehl_now, fehl_year, soll_now, soll_year)
 
     return render_template(
         "abwesenheit.html",

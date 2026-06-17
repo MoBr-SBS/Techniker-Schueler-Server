@@ -557,14 +557,16 @@ def fetch_absences(server: str, school: str, username: str, password: str,
             reason = "Kein Grund"
 
         result.append({
-            "datum":         datum,
-            "start_time":    _fmt(st) if st else "",
-            "end_time":      _fmt(et) if et else "",
-            "minutes":       mins,
-            "reason":        reason,
-            "text":          (a.get("text") or "").strip(),
-            "is_excused":    bool(a.get("isExcused")),
-            "excuse_status": a.get("excuseStatus"),
+            "datum":          datum,
+            "start_time":     _fmt(st) if st else "",
+            "end_time":       _fmt(et) if et else "",
+            "start_time_int": st,
+            "end_time_int":   et,
+            "minutes":        mins,
+            "reason":         reason,
+            "text":           (a.get("text") or "").strip(),
+            "is_excused":     bool(a.get("isExcused")),
+            "excuse_status":  a.get("excuseStatus"),
         })
 
     result.sort(key=lambda x: (x["datum"], x["start_time"]), reverse=True)
@@ -600,6 +602,57 @@ def invalidate_absence_cache(user_id: int):
 
 
 # ── Soll-Stunden (für BAföG-Quote) ───────────────────────────────────────────
+
+def _count_absent_lesson_minutes(absences: list, periods: list,
+                                  start_date: datetime.date, end_date: datetime.date,
+                                  cutoff_date: datetime.date) -> tuple:
+    """Zählt verpasste Unterrichtsminuten durch Überschneidung mit Stundenplan-Perioden.
+    Gibt (fehl_min_bis_cutoff, fehl_min_gesamt) zurück."""
+    day_slots: dict = {}
+    seen: set = set()
+    for p in (periods or []):
+        date_str = str(p.get("date", ""))
+        if len(date_str) != 8:
+            continue
+        try:
+            lesson_date = datetime.date(int(date_str[:4]), int(date_str[4:6]), int(date_str[6:]))
+        except ValueError:
+            continue
+        if not (start_date <= lesson_date <= end_date):
+            continue
+        if p.get("cellState") == "CANCELLED":
+            continue
+        st = p.get("startTime", 0)
+        et = p.get("endTime", 0)
+        if not st or not et:
+            continue
+        key = (lesson_date, st, et)
+        if key in seen:
+            continue
+        seen.add(key)
+        day_slots.setdefault(lesson_date, []).append((st, et))
+
+    until_cutoff = 0
+    total = 0
+    for a in absences:
+        datum = a["datum"]
+        if not (start_date <= datum <= end_date):
+            continue
+        ast_int = a.get("start_time_int") or 0
+        aet_int = a.get("end_time_int") or 0
+        if not ast_int or not aet_int:
+            continue
+        mins = 0
+        for lst, let in day_slots.get(datum, []):
+            overlap_start = max(lst, ast_int)
+            overlap_end   = min(let, aet_int)
+            if overlap_end > overlap_start:
+                mins += _to_minutes(overlap_end) - _to_minutes(overlap_start)
+        if datum <= cutoff_date:
+            until_cutoff += mins
+        total += mins
+    return until_cutoff, total
+
 
 def _count_scheduled_minutes(periods: list, start_date: datetime.date,
                               end_date: datetime.date,
@@ -673,31 +726,33 @@ def fetch_scheduled_hours(server: str, school: str, username: str, password: str
         _rpc(s, url, "logout")
     except Exception:
         pass
-    return _count_scheduled_minutes(all_periods, start_date, end_date, datetime.date.today())
+    soll = _count_scheduled_minutes(all_periods, start_date, end_date, datetime.date.today())
+    return soll[0], soll[1], all_periods
 
 
 def get_scheduled_hours_cached(user_id: int, server: str, school: str,
                                 username: str, password: str,
                                 start_date: datetime.date,
                                 end_date: datetime.date) -> tuple:
-    """Gibt (soll_bis_heute, soll_schuljahr, warnung_oder_None) zurück."""
+    """Gibt (soll_bis_heute, soll_schuljahr, all_periods, warnung_oder_None) zurück."""
     cache_key = (user_id, "scheduled", start_date.isoformat(), end_date.isoformat())
     cached    = _cache_get(cache_key)
     if cached:
         age = (datetime.datetime.now() - cached["ts"]).total_seconds()
         if age < CACHE_TTL:
-            return cached["until_today"], cached["full_year"], None
+            return cached["until_today"], cached["full_year"], cached.get("periods", []), None
     try:
-        until_today, full_year = fetch_scheduled_hours(
+        until_today, full_year, periods = fetch_scheduled_hours(
             server, school, username, password, start_date, end_date,
         )
         _cache_set(cache_key, {
             "until_today": until_today,
             "full_year":   full_year,
+            "periods":     periods,
             "ts":          datetime.datetime.now(),
         })
-        return until_today, full_year, None
+        return until_today, full_year, periods, None
     except WebUntisError as e:
         if cached:
-            return cached["until_today"], cached["full_year"], f"Aktualisierung fehlgeschlagen: {e}"
-        return 0, 0, str(e)
+            return cached["until_today"], cached["full_year"], cached.get("periods", []), f"Aktualisierung fehlgeschlagen: {e}"
+        return 0, 0, [], str(e)
