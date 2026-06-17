@@ -69,6 +69,19 @@ def add_benutzer():
     return redirect(url_for("admin.benutzer"))
 
 
+@bp.route("/admin/benutzer/role/<int:user_id>", methods=["POST"])
+def toggle_trusted(user_id):
+    guard = _require_admin()
+    if guard:
+        return guard
+    user = queries.get_user_by_id(user_id)
+    if not user:
+        return redirect(url_for("admin.benutzer"))
+    new_role = "user" if user["role"] == "trusted" else "trusted"
+    queries.set_user_role(user_id, new_role)
+    return redirect(url_for("admin.benutzer"))
+
+
 @bp.route("/admin/benutzer/delete/<int:user_id>", methods=["POST"])
 def delete_benutzer(user_id):
     guard = _require_admin()
@@ -84,6 +97,56 @@ def delete_benutzer(user_id):
     queries.delete_user(user_id)
     flash("Benutzer wurde gelöscht.", "success")
     return redirect(url_for("admin.benutzer"))
+
+
+@bp.route("/admin/verbindungen")
+def verbindungen():
+    guard = _require_admin()
+    if guard:
+        return guard
+    klassen = [dict(k) for k in queries.get_klassen()]
+    klassen_faecher = {
+        k["klasse_id"]: queries.get_faecher_fuer_klasse(k["klasse_id"])
+        for k in klassen
+    }
+    return render_template(
+        "admin_verbindungen.html",
+        page_id="einstellungen",
+        gruppen=queries.get_all_fach_verbindungen(),
+        klassen=klassen,
+        klassen_faecher=klassen_faecher,
+    )
+
+
+@bp.route("/admin/verbindungen/hinzufuegen", methods=["POST"])
+def verbindung_add():
+    guard = _require_admin()
+    if guard:
+        return guard
+    klassen = queries.get_klassen()
+    eintraege = []
+    for k in klassen:
+        fach = request.form.get(f"fach_{k['klasse_id']}", "").strip()
+        if fach:
+            eintraege.append((k["klasse_id"], fach))
+    if len(eintraege) >= 2:
+        queries.add_fach_verbindung_gruppe(eintraege)
+        flash("Verbindung gespeichert.", "success")
+    else:
+        flash("Mindestens zwei Klassen mit Fach auswählen.", "error")
+    return redirect(url_for("admin.verbindungen"))
+
+
+@bp.route("/admin/verbindungen/loeschen", methods=["POST"])
+def verbindung_delete():
+    guard = _require_admin()
+    if guard:
+        return guard
+    try:
+        queries.delete_fach_verbindung_gruppe(int(request.form.get("gruppe_id", "")))
+    except (ValueError, TypeError):
+        pass
+    return redirect(url_for("admin.verbindungen"))
 
 
 @bp.route("/admin/einstellungen")

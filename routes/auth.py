@@ -4,8 +4,39 @@ from flask import (
 )
 from werkzeug.security import check_password_hash, generate_password_hash
 from core import queries
+from core.encryption import derive_key, encrypt_with_key, decrypt_with_key, legacy_decrypt
 
 bp = Blueprint("auth", __name__)
+
+
+def _reencrypt_credentials(user_id: int, new_key: bytes):
+    """Verschlüsselt gespeicherte WebUntis-Credentials mit neuem Key (nach Passwort-Änderung)."""
+    creds = queries.get_webuntis_credentials(user_id)
+    if not creds:
+        return
+    old_key_str = session.get("wt_key", "")
+    if not old_key_str:
+        return
+    try:
+        plaintext = decrypt_with_key(creds["wt_password"], old_key_str.encode())
+        new_encrypted = encrypt_with_key(plaintext, new_key)
+        queries.save_webuntis_credentials(user_id, creds["wt_username"], new_encrypted, uses_user_key=True)
+    except Exception:
+        queries.delete_webuntis_credentials(user_id)
+        flash("WebUntis-Zugangsdaten konnten nicht migriert werden und wurden gelöscht. Bitte erneut eingeben.", "warning")
+
+
+def _migrate_credentials(user_id: int, wt_key: bytes):
+    """Migriert alte FERNET_KEY-verschlüsselte Credentials auf nutzerspezifischen Key."""
+    creds = queries.get_webuntis_credentials(user_id)
+    if not creds or creds["uses_user_key"]:
+        return
+    try:
+        plaintext = legacy_decrypt(creds["wt_password"])
+        new_encrypted = encrypt_with_key(plaintext, wt_key)
+        queries.save_webuntis_credentials(user_id, creds["wt_username"], new_encrypted, uses_user_key=True)
+    except Exception:
+        pass
 
 
 def _branding():
@@ -30,6 +61,11 @@ def login():
             session["user_id"]  = user["id"]
             session["username"] = user["username"]
             session["is_admin"] = bool(user["is_admin"])
+            # Nutzerspezifischen Verschlüsselungs-Key aus Passwort ableiten
+            salt   = queries.get_or_create_wt_salt(user["id"])
+            wt_key = derive_key(password, salt)
+            session["wt_key"] = wt_key.decode()
+            _migrate_credentials(user["id"], wt_key)
             return redirect(url_for("dashboard.index"))
         error = "Ungültiger Benutzername oder Passwort."
     server_name, logo_url, favicon_url = _branding()
@@ -96,6 +132,10 @@ def change_password():
         elif len(new_pw) < 6:
             error = "Das neue Passwort muss mindestens 6 Zeichen lang sein."
         else:
+            salt    = queries.get_or_create_wt_salt(session["user_id"])
+            new_key = derive_key(new_pw, salt)
+            _reencrypt_credentials(session["user_id"], new_key)
             queries.update_password(session["user_id"], generate_password_hash(new_pw))
+            session["wt_key"] = new_key.decode()
             success = "Passwort erfolgreich geändert."
     return render_template("change_password.html", page_id=None, error=error, success=success)

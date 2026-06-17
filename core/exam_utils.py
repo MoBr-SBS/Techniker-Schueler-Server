@@ -4,8 +4,9 @@ Wird von routes/pruefungen.py und routes/noten.py genutzt.
 """
 
 import datetime
+from flask import session
 from core import queries
-from core.encryption import decrypt
+from core.encryption import decrypt_with_key
 from core.webuntis_client import get_exams_cached
 
 _WOCHENTAGE = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
@@ -35,7 +36,7 @@ def load_webuntis_exams(user_id, today):
     exams, warning = get_exams_cached(
         user_id, server, school,
         creds["wt_username"],
-        decrypt(creds["wt_password"]),
+        decrypt_with_key(creds["wt_password"], session.get("wt_key", "").encode()),
         start, end,
     )
 
@@ -55,10 +56,16 @@ def load_webuntis_exams(user_id, today):
     return result, warning, True
 
 
-def load_manual_exams(today):
+def load_manual_exams(today, user_id=None):
+    klasse_id = None
+    if user_id is not None:
+        user = queries.get_user_by_id(user_id)
+        if user:
+            klasse_id = user["klasse_id"]
+
     noted_keys = queries.get_exam_note_keys()
     result = []
-    for row in queries.get_all_pruefungen():
+    for row in queries.get_all_pruefungen(klasse_id=klasse_id):
         datum = datetime.date.fromisoformat(row["datum"])
         days = (datum - today).days
         exam_key = queries.make_exam_key(row["fach"], datum)

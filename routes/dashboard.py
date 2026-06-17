@@ -3,7 +3,7 @@ from flask import Blueprint, render_template, current_app, session
 from core import queries
 from core.nav import NAV_ITEMS
 from core.exam_utils import load_webuntis_exams, load_manual_exams
-from core.encryption import decrypt
+from core.encryption import decrypt_with_key
 from core.webuntis_client import get_timetable_cached
 
 bp = Blueprint("dashboard", __name__)
@@ -36,7 +36,7 @@ def _load_today_timetable(user_id: int, today: datetime.date) -> tuple[list, str
         grid, _, periods_info, warning = get_timetable_cached(
             user_id, server, school,
             creds["wt_username"],
-            decrypt(creds["wt_password"]),
+            decrypt_with_key(creds["wt_password"], session.get("wt_key", "").encode()),
             monday,
         )
     except Exception as e:
@@ -81,7 +81,7 @@ def index():
 
     # ── Prüfungen ──────────────────────────────────────────────────────────────
     wu_exams, _warn, _wt = load_webuntis_exams(user_id, today)
-    manual_exams         = load_manual_exams(today)
+    manual_exams         = load_manual_exams(today, user_id=user_id)
     all_exams            = wu_exams + manual_exams
 
     upcoming      = sorted([e for e in all_exams if e["days"] >= 0], key=lambda e: e["datum"])

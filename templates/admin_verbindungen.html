@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Fach-Verbindungen{% endblock %}
+{% block page_title %}Fach-Verbindungen{% endblock %}
+
+{% block content %}
+
+<div class="section-label">Verbindung anlegen</div>
+<div class="widget">
+  <div class="widget-body">
+    {% if klassen %}
+    <form method="POST" action="/admin/verbindungen/hinzufuegen" id="verbindung-form">
+      <div id="verbindung-zeilen" style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px"></div>
+      <div style="display:flex;gap:8px">
+        <button type="button" class="btn" style="background:var(--surface2);color:var(--text-dim)"
+                onclick="addZeile()">
+          <i data-lucide="plus"></i> Klasse hinzufügen
+        </button>
+        <button type="submit" class="btn btn-primary">Verbindung speichern</button>
+      </div>
+    </form>
+
+    <script>
+      const KLASSEN = {{ klassen | tojson }};
+      const FAECHER = {{ klassen_faecher | tojson }};
+
+      function addZeile() {
+        const wrap = document.getElementById('verbindung-zeilen');
+        const div  = document.createElement('div');
+        div.style.cssText = 'display:grid;grid-template-columns:200px 1fr auto;gap:8px;align-items:center';
+
+        const klasseSelect = document.createElement('select');
+        klasseSelect.innerHTML = '<option value="">Klasse wählen…</option>' +
+          KLASSEN.map(k => `<option value="${k.klasse_id}">${k.klasse_name}</option>`).join('');
+
+        const fachSelect = document.createElement('select');
+        fachSelect.innerHTML = '<option value="">– Erst Klasse wählen –</option>';
+        fachSelect.disabled  = true;
+
+        klasseSelect.addEventListener('change', function() {
+          const kid     = parseInt(this.value);
+          const faecher = FAECHER[kid] || FAECHER[String(kid)] || [];
+          fachSelect.innerHTML = faecher.length
+            ? '<option value="">Fach wählen…</option>' + faecher.map(f => `<option value="${f}">${f}</option>`).join('')
+            : '<option value="">Keine Fächer bekannt</option>';
+          fachSelect.name     = kid ? `fach_${kid}` : '';
+          fachSelect.disabled = !faecher.length;
+        });
+
+        const del = document.createElement('button');
+        del.type      = 'button';
+        del.className = 'icon-btn icon-btn--danger';
+        del.title     = 'Entfernen';
+        del.innerHTML = '<i data-lucide="x"></i>';
+        del.onclick   = () => { div.remove(); lucide.createIcons(); };
+
+        div.append(klasseSelect, fachSelect, del);
+        wrap.appendChild(div);
+        lucide.createIcons();
+      }
+
+      addZeile();
+      addZeile();
+    </script>
+    {% else %}
+    <p style="font-size:0.85rem;color:var(--text-dim)">
+      Noch keine Klassen bekannt. Schüler müssen zuerst ihre WebUntis-Zugangsdaten hinterlegen.
+    </p>
+    {% endif %}
+  </div>
+</div>
+
+<div class="section-label" style="margin-top:2rem">Aktive Verbindungen</div>
+
+{% if gruppen %}
+{% for gruppe_id, mitglieder in gruppen.items() %}
+<div class="widget" style="margin-bottom:1rem">
+  <div class="widget-body" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center">
+    {% for m in mitglieder %}
+    <div style="display:flex;flex-direction:column;gap:2px;background:var(--surface2);padding:8px 12px;border-radius:8px;min-width:120px">
+      <span style="font-size:0.75rem;color:var(--text-dim)">{{ m.klasse_name }}</span>
+      <span style="font-weight:600">{{ m.fach }}</span>
+    </div>
+    {% if not loop.last %}
+    <i data-lucide="link" style="color:var(--text-dim);flex-shrink:0"></i>
+    {% endif %}
+    {% endfor %}
+    <form method="POST" action="/admin/verbindungen/loeschen" style="margin-left:auto">
+      <input type="hidden" name="gruppe_id" value="{{ gruppe_id }}">
+      <button type="submit" class="icon-btn icon-btn--danger" title="Verbindung löschen"
+              onclick="return confirm('Diese Verbindung wirklich löschen?')">
+        <i data-lucide="trash-2"></i>
+      </button>
+    </form>
+  </div>
+</div>
+{% endfor %}
+{% else %}
+<div class="empty-state" style="margin-top:32px">
+  <i data-lucide="link-2-off"></i>
+  <p>Noch keine Verbindungen angelegt.</p>
+</div>
+{% endif %}
+
+{% endblock %}

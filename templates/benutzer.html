@@ -6,75 +6,132 @@
 <div class="page-cols">
 
   <div>
-    <div class="section-label">Alle Benutzer</div>
-    <table class="noten-table">
-      <thead>
-        <tr>
-          <th>Benutzername</th>
-          <th>Rolle</th>
-          <th>Erstellt am</th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for u in users %}
-        {% set is_self = u.id == session.get('user_id') %}
-        {% set last_admin = u.is_admin and admin_count <= 1 %}
-        <tr>
-          <td>
-            <span class="user-name-cell">
-              <i data-lucide="user"></i>
-              {{ u.username }}
-              {% if is_self %}<span class="badge-self">Du</span>{% endif %}
-            </span>
-          </td>
-          <td>
-            {% if u.is_admin %}
-            <span class="role-badge role-admin"><i data-lucide="shield"></i> Admin</span>
-            {% else %}
-            <span class="role-badge role-user"><i data-lucide="user"></i> Benutzer</span>
-            {% endif %}
-          </td>
-          <td class="mono text-muted">{{ u.erstellt_am[:10] }}</td>
-          <td>
-            {% if not is_self and not last_admin %}
-            <form method="POST" action="/admin/benutzer/delete/{{ u.id }}" style="display:contents">
-              <button type="submit" class="icon-btn icon-btn--danger" title="Löschen"
-                onclick="return confirm('Benutzer „{{ u.username }}" wirklich löschen?')">
-                <i data-lucide="trash-2"></i>
-              </button>
-            </form>
-            {% else %}
-            <span class="icon-btn" style="opacity:0.2;cursor:default" title="{{ 'Eigenes Konto' if is_self else 'Letzter Admin' }}">
-              <i data-lucide="lock"></i>
-            </span>
-            {% endif %}
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+    {% macro user_row(u) %}
+    {% set is_self = u.id == session.get('user_id') %}
+    {% set last_admin = u.is_admin and admin_count <= 1 %}
+    <tr>
+      <td>
+        <span class="user-name-cell">
+          <i data-lucide="user"></i>
+          {{ u.username }}
+          {% if is_self %}<span class="badge-self">Du</span>{% endif %}
+        </span>
+      </td>
+      <td>
+        {% if u.is_admin %}
+        <span class="role-badge role-admin"><i data-lucide="shield"></i> Admin</span>
+        {% elif u.role == 'trusted' %}
+        <span class="role-badge role-trusted"><i data-lucide="star"></i> Trusted</span>
+        {% else %}
+        <span class="role-badge role-user"><i data-lucide="user"></i> Benutzer</span>
+        {% endif %}
+      </td>
+      <td class="mono text-muted">{{ u.erstellt_am[:10] }}</td>
+      <td>
+        {% if not u.is_admin and not is_self %}
+        <form method="POST" action="/admin/benutzer/role/{{ u.id }}" style="display:contents">
+          <button type="submit" class="icon-btn"
+                  style="color:{{ 'var(--accent)' if u.role == 'trusted' else 'var(--text-dim)' }}"
+                  title="{{ 'Trusted-Berechtigung entfernen' if u.role == 'trusted' else 'Als Trusted markieren: Nutzer darf Prüfungen für seine Klasse eintragen und löschen' }}">
+            <i data-lucide="star"></i>
+          </button>
+        </form>
+        {% endif %}
+      </td>
+      <td>
+        {% if not is_self and not last_admin %}
+        <form method="POST" action="/admin/benutzer/delete/{{ u.id }}" style="display:contents">
+          <button type="submit" class="icon-btn icon-btn--danger" title="Löschen"
+            onclick="return confirm('Benutzer „{{ u.username }}" wirklich löschen?')">
+            <i data-lucide="trash-2"></i>
+          </button>
+        </form>
+        {% else %}
+        <span class="icon-btn" style="opacity:0.2;cursor:default" title="{{ 'Eigenes Konto' if is_self else 'Letzter Admin' }}">
+          <i data-lucide="lock"></i>
+        </span>
+        {% endif %}
+      </td>
+    </tr>
+    {% endmacro %}
+
+    {% set klassen = users | map(attribute='klasse_name') | select | unique | list | sort %}
+    {% set ohne_klasse = users | rejectattr('klasse_name') | list %}
+
+    {% if klassen %}
+      {% for klasse in klassen %}
+      <div class="section-label" style="margin-top:1.5rem">
+        <i data-lucide="users"></i> {{ klasse }}
+      </div>
+      <table class="noten-table">
+        <thead><tr><th>Benutzername</th><th>Rolle</th><th>Erstellt am</th><th title="Darf Prüfungen für seine Klasse eintragen">Trusted</th><th></th></tr></thead>
+        <tbody>
+          {% for u in users if u.klasse_name == klasse %}
+            {{ user_row(u) }}
+          {% endfor %}
+        </tbody>
+      </table>
+      {% endfor %}
+
+      {% if ohne_klasse %}
+      <div class="section-label" style="margin-top:1.5rem">
+        <i data-lucide="user-x"></i> Ohne Klasse
+      </div>
+      <table class="noten-table">
+        <thead><tr><th>Benutzername</th><th>Rolle</th><th>Erstellt am</th><th title="Darf Prüfungen für seine Klasse eintragen">Trusted</th><th></th></tr></thead>
+        <tbody>
+          {% for u in ohne_klasse %}{{ user_row(u) }}{% endfor %}
+        </tbody>
+      </table>
+      {% endif %}
+
+    {% else %}
+      <div class="section-label">Alle Benutzer</div>
+      <table class="noten-table">
+        <thead><tr><th>Benutzername</th><th>Rolle</th><th>Erstellt am</th><th title="Darf Prüfungen für seine Klasse eintragen">Trusted</th><th></th></tr></thead>
+        <tbody>
+          {% for u in users %}{{ user_row(u) }}{% endfor %}
+        </tbody>
+      </table>
+    {% endif %}
   </div>
 
-  <div class="widget sidebar-form">
-    <div class="widget-header">
-      <i data-lucide="user-plus"></i>
-      <span>Benutzer anlegen</span>
+  <div style="display:flex;flex-direction:column;gap:1rem">
+    <div class="widget sidebar-form">
+      <div class="widget-header">
+        <i data-lucide="user-plus"></i>
+        <span>Benutzer anlegen</span>
+      </div>
+      <div class="widget-body">
+        <form method="POST" action="/admin/benutzer/add" class="vform">
+          <label>Benutzername *
+            <input type="text" name="username" placeholder="z. B. mueller" required>
+          </label>
+          <label>Passwort * <span class="form-hint">(min. 6 Zeichen)</span>
+            <input type="password" name="password" required minlength="6">
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" name="is_admin">
+            <span>Administrator-Rechte</span>
+          </label>
+          <button type="submit" class="btn btn-primary">Anlegen</button>
+        </form>
+      </div>
     </div>
-    <div class="widget-body">
-      <form method="POST" action="/admin/benutzer/add" class="vform">
-        <label>Benutzername *
-          <input type="text" name="username" placeholder="z. B. mueller" required>
-        </label>
-        <label>Passwort * <span class="form-hint">(min. 6 Zeichen)</span>
-          <input type="password" name="password" required minlength="6">
-        </label>
-        <label class="checkbox-label">
-          <input type="checkbox" name="is_admin">
-          <span>Administrator-Rechte</span>
-        </label>
-        <button type="submit" class="btn btn-primary">Anlegen</button>
-      </form>
+
+    <div class="widget sidebar-form">
+      <div class="widget-header">
+        <i data-lucide="link"></i>
+        <span>Fach-Verbindungen</span>
+      </div>
+      <div class="widget-body">
+        <p style="font-size:0.82rem;color:var(--text-dim);margin:0 0 10px">
+          Klassen die dasselbe Fach gemeinsam haben, sehen auch dieselben manuellen Prüfungen dafür.
+        </p>
+        <a href="/admin/verbindungen" class="btn btn-primary" style="width:100%;justify-content:center">
+          <i data-lucide="settings"></i> Verbindungen verwalten
+        </a>
+      </div>
     </div>
   </div>
 

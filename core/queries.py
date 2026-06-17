@@ -195,8 +195,24 @@ def update_password(user_id, password_hash):
 
 def get_all_users():
     return get_db().execute(
-        "SELECT id, username, is_admin, erstellt_am FROM users ORDER BY username"
+        "SELECT id, username, is_admin, role, erstellt_am, klasse_id, klasse_name "
+        "FROM users ORDER BY klasse_name NULLS LAST, username"
     ).fetchall()
+
+
+def update_user_klasse(user_id, klasse_id, klasse_name=None):
+    db = get_db()
+    db.execute(
+        "UPDATE users SET klasse_id=?, klasse_name=? WHERE id=?",
+        (klasse_id, klasse_name, user_id),
+    )
+    db.commit()
+
+
+def set_user_role(user_id, role):
+    db = get_db()
+    db.execute("UPDATE users SET role=? WHERE id=?", (role, user_id))
+    db.commit()
 
 
 def count_admins():
@@ -220,6 +236,77 @@ def user_exists(username):
     ).fetchone() is not None
 
 
+# ── Klassen & Fächer ──────────────────────────────────────────────────────────
+
+def get_klassen():
+    """Alle bekannten Klassen aus der users-Tabelle."""
+    return get_db().execute(
+        "SELECT DISTINCT klasse_id, klasse_name FROM users "
+        "WHERE klasse_id IS NOT NULL ORDER BY klasse_name"
+    ).fetchall()
+
+
+def get_faecher_fuer_klasse(klasse_id: int) -> list:
+    return [
+        row["fach"] for row in get_db().execute(
+            "SELECT fach FROM klasse_faecher WHERE klasse_id=? ORDER BY fach",
+            (klasse_id,),
+        ).fetchall()
+    ]
+
+
+def set_klasse_faecher(klasse_id: int, faecher: set):
+    db = get_db()
+    db.execute("DELETE FROM klasse_faecher WHERE klasse_id=?", (klasse_id,))
+    for fach in faecher:
+        db.execute(
+            "INSERT OR IGNORE INTO klasse_faecher (klasse_id, fach) VALUES (?,?)",
+            (klasse_id, fach),
+        )
+    db.commit()
+
+
+# ── Fach-Verbindungen ─────────────────────────────────────────────────────────
+
+def get_all_fach_verbindungen():
+    """Gibt alle Verbindungen gruppiert zurück: {gruppe_id: [{klasse_id, fach, klasse_name}]}"""
+    rows = get_db().execute("""
+        SELECT v.gruppe_id, v.klasse_id, v.fach, u.klasse_name
+        FROM fach_verbindungen v
+        LEFT JOIN (
+            SELECT DISTINCT klasse_id, klasse_name FROM users WHERE klasse_id IS NOT NULL
+        ) u ON u.klasse_id = v.klasse_id
+        ORDER BY v.gruppe_id, u.klasse_name
+    """).fetchall()
+    gruppen: dict = {}
+    for row in rows:
+        gruppen.setdefault(row["gruppe_id"], []).append({
+            "klasse_id":   row["klasse_id"],
+            "fach":        row["fach"],
+            "klasse_name": row["klasse_name"] or str(row["klasse_id"]),
+        })
+    return gruppen
+
+
+def add_fach_verbindung_gruppe(eintraege: list[tuple[int, str]]):
+    """Legt eine neue Verbindungsgruppe an. eintraege = [(klasse_id, fach), ...]"""
+    db = get_db()
+    row = db.execute("SELECT COALESCE(MAX(gruppe_id), 0) + 1 FROM fach_verbindungen").fetchone()
+    gruppe_id = row[0]
+    for klasse_id, fach in eintraege:
+        db.execute(
+            "INSERT OR REPLACE INTO fach_verbindungen (gruppe_id, klasse_id, fach) VALUES (?,?,?)",
+            (gruppe_id, klasse_id, fach),
+        )
+    db.commit()
+
+
+def delete_fach_verbindung_gruppe(gruppe_id: int):
+    db = get_db()
+    db.execute("DELETE FROM fach_verbindungen WHERE gruppe_id=?", (gruppe_id,))
+    db.commit()
+
+
 def delete_user(user_id):
     db = get_db()
     db.execute("DELETE FROM users WHERE id=?", (user_id,))
@@ -228,7 +315,23 @@ def delete_user(user_id):
 
 # ── Prüfungen (manuell) ───────────────────────────────────────────────────────
 
-def get_all_pruefungen():
+def get_all_pruefungen(klasse_id=None):
+    if klasse_id is not None:
+        # Zeige Prüfungen der eigenen Klasse, klassenlose, und solche wo
+        # Prüfungsklasse+Fach über eine Verbindungsgruppe mit der eigenen Klasse verknüpft ist.
+        return get_db().execute("""
+            SELECT p.* FROM pruefungen p
+            WHERE p.klasse_id IS NULL
+               OR p.klasse_id = ?
+               OR EXISTS (
+                   SELECT 1 FROM fach_verbindungen v1
+                   JOIN fach_verbindungen v2 ON v1.gruppe_id = v2.gruppe_id
+                   WHERE v1.klasse_id = p.klasse_id
+                     AND v1.fach      = p.fach
+                     AND v2.klasse_id = ?
+               )
+            ORDER BY p.datum
+        """, (klasse_id, klasse_id)).fetchall()
     return get_db().execute(
         "SELECT * FROM pruefungen ORDER BY datum"
     ).fetchall()
@@ -240,11 +343,11 @@ def get_pruefung(pruefung_id):
     ).fetchone()
 
 
-def add_pruefung(fach, art, datum, notiz=""):
+def add_pruefung(fach, art, datum, notiz="", klasse_id=None):
     db = get_db()
     db.execute(
-        "INSERT INTO pruefungen (fach, art, datum, notiz) VALUES (?,?,?,?)",
-        (fach, art, datum, notiz),
+        "INSERT INTO pruefungen (fach, art, datum, notiz, klasse_id) VALUES (?,?,?,?,?)",
+        (fach, art, datum, notiz, klasse_id),
     )
     db.commit()
 
@@ -286,16 +389,17 @@ def get_webuntis_credentials(user_id):
     ).fetchone()
 
 
-def save_webuntis_credentials(user_id, wt_username, wt_password):
+def save_webuntis_credentials(user_id, wt_username, wt_password, uses_user_key: bool = False):
     db = get_db()
     db.execute(
-        """INSERT INTO webuntis_credentials (user_id, server, school, wt_username, wt_password)
-           VALUES (?,?,?,?,?)
+        """INSERT INTO webuntis_credentials (user_id, server, school, wt_username, wt_password, uses_user_key)
+           VALUES (?,?,?,?,?,?)
            ON CONFLICT(user_id) DO UPDATE SET
                wt_username=excluded.wt_username,
                wt_password=excluded.wt_password,
+               uses_user_key=excluded.uses_user_key,
                gespeichert_am=datetime('now')""",
-        (user_id, "", "", wt_username, wt_password),
+        (user_id, "", "", wt_username, wt_password, int(uses_user_key)),
     )
     db.commit()
 
@@ -304,6 +408,30 @@ def delete_webuntis_credentials(user_id):
     db = get_db()
     db.execute("DELETE FROM webuntis_credentials WHERE user_id=?", (user_id,))
     db.commit()
+
+
+# ── Nutzerspezifischer Verschlüsselungs-Salt ──────────────────────────────────
+
+import os as _os
+
+
+def get_wt_salt(user_id: int) -> bytes | None:
+    row = get_db().execute(
+        "SELECT wt_key_salt FROM users WHERE id=?", (user_id,)
+    ).fetchone()
+    if row and row["wt_key_salt"]:
+        return bytes.fromhex(row["wt_key_salt"])
+    return None
+
+
+def get_or_create_wt_salt(user_id: int) -> bytes:
+    salt = get_wt_salt(user_id)
+    if salt is None:
+        salt = _os.urandom(32)
+        db = get_db()
+        db.execute("UPDATE users SET wt_key_salt=? WHERE id=?", (salt.hex(), user_id))
+        db.commit()
+    return salt
 
 
 # ── Prüfungs-Hilfsfunktionen ──────────────────────────────────────────────────

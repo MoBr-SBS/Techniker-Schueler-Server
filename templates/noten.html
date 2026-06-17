@@ -144,13 +144,16 @@
       <div class="manual-form-row">
         <div class="manual-form-field">
           <label>Fach *</label>
-          <input type="text" name="fach" placeholder="z. B. Mathematik"
-                 list="fach-list" required>
-          <datalist id="fach-list">
-            {% for s in summaries %}
-            <option value="{{ s.fach }}">
+          {% if klasse_faecher %}
+          <select name="fach" required>
+            <option value="">Fach wählen…</option>
+            {% for f in klasse_faecher %}
+            <option value="{{ f }}">{{ f }}</option>
             {% endfor %}
-          </datalist>
+          </select>
+          {% else %}
+          <input type="text" name="fach" placeholder="z. B. Mathematik" required>
+          {% endif %}
         </div>
         <div class="manual-form-field manual-form-field--sm">
           <label>Art *</label>

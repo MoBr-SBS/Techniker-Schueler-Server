@@ -2,7 +2,7 @@ import datetime
 from collections import defaultdict
 from flask import Blueprint, render_template, request, redirect, url_for, session
 from core import queries
-from core.encryption import decrypt
+from core.encryption import decrypt_with_key
 from core.webuntis_client import (get_absences_cached, invalidate_absence_cache,
                                   get_scheduled_hours_cached)
 from core.nav import NAV_ITEMS
@@ -94,7 +94,7 @@ def index():
     start, end = _schuljahr_range()
     server, school = queries.get_webuntis_config()
 
-    pw = decrypt(creds["wt_password"])
+    pw = decrypt_with_key(creds["wt_password"], session.get("wt_key", "").encode())
 
     absences, warning = get_absences_cached(
         session["user_id"], server, school,

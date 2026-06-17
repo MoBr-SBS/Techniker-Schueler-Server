@@ -108,6 +108,60 @@ def init_db():
         db.execute("DROP TABLE _pruef_old")
         db.commit()
 
+    # Migration: wt_key_salt in users (für nutzerspezifische Verschlüsselung)
+    users_cols = [row[1] for row in db.execute("PRAGMA table_info(users)").fetchall()]
+    if "wt_key_salt" not in users_cols:
+        db.execute("ALTER TABLE users ADD COLUMN wt_key_salt TEXT DEFAULT NULL")
+        db.commit()
+
+    # Migration: uses_user_key in webuntis_credentials (Marker für neues Verschlüsselungsformat)
+    wuc_cols = [row[1] for row in db.execute("PRAGMA table_info(webuntis_credentials)").fetchall()]
+    if "uses_user_key" not in wuc_cols:
+        db.execute("ALTER TABLE webuntis_credentials ADD COLUMN uses_user_key INTEGER NOT NULL DEFAULT 0")
+        db.commit()
+
+    # Migration: klasse_id + klasse_name + role in users
+    if "klasse_id" not in users_cols:
+        db.execute("ALTER TABLE users ADD COLUMN klasse_id INTEGER DEFAULT NULL")
+        db.commit()
+    if "klasse_name" not in users_cols:
+        db.execute("ALTER TABLE users ADD COLUMN klasse_name TEXT DEFAULT NULL")
+        db.commit()
+    if "role" not in users_cols:
+        db.execute("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'")
+        db.commit()
+
+    # Bekannte Fächer pro Klasse (aus WebUntis-Stundenplan)
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS klasse_faecher (
+            klasse_id INTEGER NOT NULL,
+            fach      TEXT    NOT NULL,
+            PRIMARY KEY (klasse_id, fach)
+        )
+    """)
+
+    # Klassenübergreifende Fach-Verbindungen (mit gruppe_id für unterschiedliche Fachnamen)
+    fv_row = db.execute(
+        "SELECT sql FROM sqlite_master WHERE type='table' AND name='fach_verbindungen'"
+    ).fetchone()
+    if fv_row and "gruppe_id" not in fv_row[0]:
+        db.execute("DROP TABLE fach_verbindungen")
+        db.commit()
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS fach_verbindungen (
+            gruppe_id INTEGER NOT NULL,
+            klasse_id INTEGER NOT NULL,
+            fach      TEXT    NOT NULL,
+            PRIMARY KEY (gruppe_id, klasse_id)
+        )
+    """)
+
+    # Migration: klasse_id in pruefungen
+    pruef_cols = [row[1] for row in db.execute("PRAGMA table_info(pruefungen)").fetchall()]
+    if "klasse_id" not in pruef_cols:
+        db.execute("ALTER TABLE pruefungen ADD COLUMN klasse_id INTEGER DEFAULT NULL")
+        db.commit()
+
     # Migrations: noten table extensions
     noten_cols = [row[1] for row in db.execute("PRAGMA table_info(noten)").fetchall()]
     if "exam_key" not in noten_cols:

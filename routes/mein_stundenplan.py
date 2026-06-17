@@ -2,7 +2,7 @@ import datetime
 
 from flask import Blueprint, render_template, session, current_app, redirect, url_for, request
 from core import queries
-from core.encryption import decrypt
+from core.encryption import decrypt_with_key
 from core.webuntis_client import get_timetable_cached, get_exams_cached, get_absences_cached, invalidate_cache, invalidate_exam_cache
 from core.nav import NAV_ITEMS
 
@@ -41,7 +41,7 @@ def index():
 
     server, school = queries.get_webuntis_config()
     wu_user = creds["wt_username"]
-    wu_pass = decrypt(creds["wt_password"])
+    wu_pass = decrypt_with_key(creds["wt_password"], session.get("wt_key", "").encode())
 
     grid, monday, periods_info, warning = get_timetable_cached(
         session["user_id"],

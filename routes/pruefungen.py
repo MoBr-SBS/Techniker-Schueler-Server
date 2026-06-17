@@ -1,6 +1,6 @@
 import re
 import datetime
-from flask import Blueprint, render_template, request, redirect, url_for, session
+from flask import Blueprint, render_template, request, redirect, url_for, session, abort
 from core import queries
 from core.webuntis_client import invalidate_exam_cache
 from core.exam_utils import load_webuntis_exams, load_manual_exams
@@ -9,11 +9,20 @@ from core.nav import NAV_ITEMS
 bp = Blueprint("pruefungen", __name__)
 
 
+def _current_user():
+    return queries.get_user_by_id(session["user_id"])
+
+
+def _can_add(user):
+    return bool(user and (user["is_admin"] or user["role"] == "trusted"))
+
+
 @bp.route("/pruefungen")
 def index():
     today = datetime.date.today()
+    user  = _current_user()
     wu_exams, warning, wt_configured = load_webuntis_exams(session["user_id"], today)
-    manual_exams = load_manual_exams(today)
+    manual_exams = load_manual_exams(today, user_id=session["user_id"])
 
     all_exams = wu_exams + manual_exams
     all_exams.sort(key=lambda e: e["datum"])
@@ -31,6 +40,10 @@ def index():
         past=past,
         warning=warning,
         wt_error=warning if wt_configured and not wu_exams and warning else None,
+        today_iso=today.isoformat(),
+        is_admin=bool(user and user["is_admin"]),
+        can_add=_can_add(user),
+        klassen=queries.get_klassen() if user and user["is_admin"] else [],
     )
 
 
@@ -42,13 +55,28 @@ def refresh():
 
 @bp.route("/pruefungen/manuell/hinzufuegen", methods=["POST"])
 def manuell_add():
+    user = _current_user()
+    if not _can_add(user):
+        abort(403)
+
     fach  = request.form.get("fach", "").strip()
     datum = request.form.get("datum", "").strip()
     notiz = request.form.get("notiz", "").strip()
+    art   = request.form.get("art", "Ex").strip()
+    if art not in ("Ex", "SA"):
+        art = "Ex"
     return_url = request.form.get("_return", url_for("pruefungen.index"))
 
     if fach and datum:
-        queries.add_pruefung(fach, "Ex", datum, notiz)
+        if user["is_admin"]:
+            # Admin kann Klasse explizit wählen; kein Eintrag = global (None)
+            try:
+                klasse_id = int(request.form.get("klasse_id")) if request.form.get("klasse_id") else None
+            except (ValueError, TypeError):
+                klasse_id = None
+        else:
+            klasse_id = user["klasse_id"]
+        queries.add_pruefung(fach, art, datum, notiz, klasse_id=klasse_id)
     return redirect(return_url)
 
 
@@ -63,6 +91,9 @@ def manuell_notiz(pruefung_id):
 
 @bp.route("/pruefungen/manuell/<int:pruefung_id>/loeschen", methods=["POST"])
 def manuell_delete(pruefung_id):
+    user = _current_user()
+    if not _can_add(user):
+        abort(403)
     queries.delete_pruefung(pruefung_id)
     return_url = request.form.get("_return", url_for("pruefungen.index"))
     return redirect(return_url)

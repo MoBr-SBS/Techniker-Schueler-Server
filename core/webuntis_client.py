@@ -193,10 +193,14 @@ def fetch_timetable(server: str, school: str, username: str, password: str,
     raw_subjects = _safe_rpc(s, url, "getSubjects")
     raw_teachers = _safe_rpc(s, url, "getTeachers")
     raw_rooms    = _safe_rpc(s, url, "getRooms")
+    raw_klassen  = _safe_rpc(s, url, "getKlassen")
 
     subjects = {item["id"]: item for item in raw_subjects if "id" in item}
     teachers = {item["id"]: item for item in raw_teachers if "id" in item}
     rooms    = {item["id"]: item for item in raw_rooms    if "id" in item}
+    klassen  = {item["id"]: item for item in raw_klassen  if "id" in item}
+
+    klasse_name = klassen.get(klasse_id, {}).get("name") if klasse_id else None
 
     try:
         _rpc(s, url, "logout")
@@ -204,7 +208,7 @@ def fetch_timetable(server: str, school: str, username: str, password: str,
         pass
 
     grid = _build_grid(periods, period_map, n_periods, monday, subjects, teachers, rooms)
-    return grid, monday, periods_info
+    return grid, monday, periods_info, klasse_id, klasse_name
 
 
 _RANGE_HALF = 2  # Wochen vor/nach der angefragten Woche, die pro Session mitgeladen werden

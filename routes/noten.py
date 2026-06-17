@@ -92,13 +92,19 @@ def index():
     # ── Vergangene Prüfungen für offene Bewertungen ───────────────────────────
     today = datetime.date.today()
     wu_exams, _warning, _wt_configured = load_webuntis_exams(user_id, today)
-    manual_exams = load_manual_exams(today)
+    manual_exams = load_manual_exams(today, user_id=user_id)
 
     all_past = [e for e in wu_exams + manual_exams if e["days"] < 0]
     all_past.sort(key=lambda e: e["datum"], reverse=True)
 
     graded_keys   = queries.get_graded_exam_keys_for_user(user_id)
     pending_exams = [e for e in all_past if e["exam_key"] not in graded_keys]
+
+    user = queries.get_user_by_id(user_id)
+    klasse_faecher = (
+        queries.get_faecher_fuer_klasse(user["klasse_id"])
+        if user and user["klasse_id"] else []
+    )
 
     return render_template(
         "noten.html",
@@ -108,6 +114,7 @@ def index():
         gesamt_schnitt=gesamt_schnitt,
         today=today.isoformat(),
         pending_exams=pending_exams,
+        klasse_faecher=klasse_faecher,
     )
 
 

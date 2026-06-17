@@ -75,7 +75,7 @@
         {% if exam.heute %}–{% elif exam.days == 1 %}Morgen{% else %}in {{ exam.days }} Tagen{% endif %}
       </span>
 
-      {% if exam.source == 'manual' %}
+      {% if exam.source == 'manual' and can_add %}
       <form method="POST" action="/pruefungen/manuell/{{ exam.id }}/loeschen"
             style="display:inline" onsubmit="return confirm('Eintrag löschen?')">
         <button type="submit" class="btn-icon-del" title="Löschen"><i data-lucide="trash-2"></i></button>
@@ -138,7 +138,7 @@
     </div>
 
     <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-shrink:0">
-      {% if exam.source == 'manual' %}
+      {% if exam.source == 'manual' and can_add %}
       <form method="POST" action="/pruefungen/manuell/{{ exam.id }}/loeschen"
             style="display:inline" onsubmit="return confirm('Eintrag löschen?')">
         <button type="submit" class="btn-icon-del" title="Löschen"><i data-lucide="trash-2"></i></button>
@@ -157,6 +157,72 @@
   </div>
   {% endfor %}
 </div>
+{% endif %}
+
+{# ── Prüfung eintragen (Admin + Trusted) ──────────────────────────────────── #}
+{% if can_add %}
+<div class="manual-entry-wrap mt-20">
+  <button type="button" class="btn btn-sm manual-entry-toggle" id="admin-pruef-toggle"
+          onclick="toggleAdminPruef()">
+    <i data-lucide="plus" id="admin-pruef-icon"></i>
+    Prüfung eintragen
+  </button>
+  <div id="admin-pruef-section" style="display:none" class="manual-form-card">
+    <form method="POST" action="/pruefungen/manuell/hinzufuegen" class="manual-inline-form">
+      <input type="hidden" name="_return" value="{{ url_for('pruefungen.index') }}">
+      <div class="manual-form-row">
+        <div class="manual-form-field">
+          <label>Fach *</label>
+          <input type="text" name="fach" placeholder="z. B. Mathematik" required>
+        </div>
+        <div class="manual-form-field manual-form-field--sm">
+          <label>Art *</label>
+          <select name="art">
+            <option value="Ex">Ex</option>
+            <option value="SA">SA</option>
+          </select>
+        </div>
+        <div class="manual-form-field manual-form-field--sm">
+          <label>Datum *</label>
+          <input type="date" name="datum" required>
+        </div>
+        <div class="manual-form-field">
+          <label>Notiz</label>
+          <input type="text" name="notiz" placeholder="z. B. Kapitel 3–5">
+        </div>
+        {% if is_admin and klassen %}
+        <div class="manual-form-field manual-form-field--sm">
+          <label>Klasse</label>
+          <select name="klasse_id">
+            <option value="">Global (alle)</option>
+            {% for k in klassen %}
+            <option value="{{ k.klasse_id }}">{{ k.klasse_name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        {% endif %}
+        <div class="manual-form-field manual-form-field--btn">
+          <label>&nbsp;</label>
+          <button type="submit" class="btn btn-primary">Eintragen</button>
+        </div>
+      </div>
+    </form>
+  </div>
+</div>
+<script>
+function toggleAdminPruef() {
+  var s = document.getElementById('admin-pruef-section');
+  var i = document.getElementById('admin-pruef-icon');
+  if (s.style.display === 'none') {
+    s.style.display = 'block';
+    i.setAttribute('data-lucide', 'x');
+  } else {
+    s.style.display = 'none';
+    i.setAttribute('data-lucide', 'plus');
+  }
+  lucide.createIcons();
+}
+</script>
 {% endif %}
 
 {% endblock %}
