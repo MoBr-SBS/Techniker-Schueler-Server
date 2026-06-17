@@ -6,10 +6,68 @@ Ergebnisse werden 30 Minuten im Arbeitsspeicher gecacht.
 """
 
 import datetime
+import json
+import os
 import requests
+import shelve
+import threading
 
 CACHE_TTL = 1800  # Sekunden (30 Minuten)
-_cache: dict = {}
+CACHE_DIR = os.environ.get("WEBUNTIS_CACHE_DIR", "cache")
+_SHELF    = os.path.join(CACHE_DIR, "webuntis_cache")
+_lock     = threading.RLock()
+_mem: dict = {}
+
+
+def _k(key: tuple) -> str:
+    return json.dumps(key)
+
+
+def _cache_get(key: tuple):
+    with _lock:
+        return _mem.get(_k(key))
+
+
+def _cache_set(key: tuple, value: dict):
+    ks = _k(key)
+    with _lock:
+        _mem[ks] = value
+        try:
+            with shelve.open(_SHELF) as db:
+                db[ks] = value
+        except Exception:
+            pass
+
+
+def _cache_del(ks: str):
+    with _lock:
+        _mem.pop(ks, None)
+        try:
+            with shelve.open(_SHELF) as db:
+                if ks in db:
+                    del db[ks]
+        except Exception:
+            pass
+
+
+def _cache_keys() -> list:
+    with _lock:
+        return list(_mem.keys())
+
+
+def _load_from_disk():
+    os.makedirs(CACHE_DIR, exist_ok=True)
+    try:
+        with shelve.open(_SHELF) as db:
+            now = datetime.datetime.now()
+            for ks, v in db.items():
+                if (now - v.get("ts", datetime.datetime.min)).total_seconds() < CACHE_TTL:
+                    _mem[ks] = v
+    except Exception:
+        pass
+
+
+_load_from_disk()
 
 
 class WebUntisError(Exception):
@@ -227,7 +285,7 @@ def get_timetable_cached(user_id: int, server: str, school: str,
         monday = today - datetime.timedelta(days=today.weekday())
 
     cache_key = (user_id, monday.isoformat())
-    cached    = _cache.get(cache_key)
+    cached    = _cache_get(cache_key)
     if cached:
         age = (datetime.datetime.now() - cached["ts"]).total_seconds()
         if age < CACHE_TTL:
@@ -283,14 +341,14 @@ def get_timetable_cached(user_id: int, server: str, school: str,
             week_monday = monday + datetime.timedelta(weeks=offset)
             grid = _build_grid(periods, period_map, n_periods, week_monday,
                                subjects, teachers, rooms)
-            _cache[(user_id, week_monday.isoformat())] = {
+            _cache_set((user_id, week_monday.isoformat()), {
                 "grid":         grid,
                 "monday":       week_monday,
                 "periods_info": periods_info,
                 "ts":           now,
-            }
+            })
 
-        entry = _cache[cache_key]
+        entry = _cache_get(cache_key)
         return entry["grid"], entry["monday"], entry["periods_info"], None
 
     except WebUntisError as e:
@@ -302,15 +360,21 @@ def get_timetable_cached(user_id: int, server: str, school: str,
 
 def invalidate_cache(user_id: int, monday: datetime.date = None):
     if monday is not None:
-        _cache.pop((user_id, monday.isoformat()), None)
+        _cache_del(_k((user_id, monday.isoformat())))
     else:
-        for key in list(_cache.keys()):
-            if key[0] == user_id:
-                _cache.pop(key, None)
+        for ks in _cache_keys():
+            if json.loads(ks)[0] == user_id:
+                _cache_del(ks)
 
 
 def clear_all_caches():
-    _cache.clear()
+    with _lock:
+        _mem.clear()
+        try:
+            with shelve.open(_SHELF) as db:
+                db.clear()
+        except Exception:
+            pass
 
 
 # ── Prüfungen ─────────────────────────────────────────────────────────────────
@@ -379,7 +443,7 @@ def get_exams_cached(user_id: int, server: str, school: str,
                      start_date: datetime.date, end_date: datetime.date) -> tuple:
     """Gibt (exams_liste, warnung_oder_None) zurück."""
     cache_key = (user_id, "exams", start_date.isoformat(), end_date.isoformat())
-    cached    = _cache.get(cache_key)
+    cached    = _cache_get(cache_key)
     if cached:
         age = (datetime.datetime.now() - cached["ts"]).total_seconds()
         if age < CACHE_TTL:
@@ -387,7 +451,7 @@ def get_exams_cached(user_id: int, server: str, school: str,
 
     try:
         exams = fetch_exams(server, school, username, password, start_date, end_date)
-        _cache[cache_key] = {"exams": exams, "ts": datetime.datetime.now()}
+        _cache_set(cache_key, {"exams": exams, "ts": datetime.datetime.now()})
         return exams, None
     except WebUntisError as e:
         if cached:
@@ -396,9 +460,10 @@ def get_exams_cached(user_id: int, server: str, school: str,
 
 
 def invalidate_exam_cache(user_id: int):
-    for key in list(_cache.keys()):
-        if key[0] == user_id and len(key) > 1 and key[1] == "exams":
-            _cache.pop(key, None)
+    for ks in _cache_keys():
+        parsed = json.loads(ks)
+        if parsed[0] == user_id and len(parsed) > 1 and parsed[1] == "exams":
+            _cache_del(ks)
 
 
 # ── Abwesenheiten ─────────────────────────────────────────────────────────────
@@ -511,7 +576,7 @@ def get_absences_cached(user_id: int, server: str, school: str,
                         start_date: datetime.date, end_date: datetime.date) -> tuple:
     """Gibt (absences_liste, warnung_oder_None) zurück."""
     cache_key = (user_id, "absences", start_date.isoformat(), end_date.isoformat())
-    cached    = _cache.get(cache_key)
+    cached    = _cache_get(cache_key)
     if cached:
         age = (datetime.datetime.now() - cached["ts"]).total_seconds()
         if age < CACHE_TTL:
@@ -519,7 +584,7 @@ def get_absences_cached(user_id: int, server: str, school: str,
 
     try:
         absences = fetch_absences(server, school, username, password, start_date, end_date)
-        _cache[cache_key] = {"absences": absences, "ts": datetime.datetime.now()}
+        _cache_set(cache_key, {"absences": absences, "ts": datetime.datetime.now()})
         return absences, None
     except WebUntisError as e:
         if cached:
@@ -528,9 +593,10 @@ def get_absences_cached(user_id: int, server: str, school: str,
 
 
 def invalidate_absence_cache(user_id: int):
-    for key in list(_cache.keys()):
-        if key[0] == user_id and len(key) > 1 and key[1] == "absences":
-            _cache.pop(key, None)
+    for ks in _cache_keys():
+        parsed = json.loads(ks)
+        if parsed[0] == user_id and len(parsed) > 1 and parsed[1] == "absences":
+            _cache_del(ks)
 
 
 # ── Soll-Stunden (für BAföG-Quote) ───────────────────────────────────────────
@@ -616,7 +682,7 @@ def get_scheduled_hours_cached(user_id: int, server: str, school: str,
                                 end_date: datetime.date) -> tuple:
     """Gibt (soll_bis_heute, soll_schuljahr, warnung_oder_None) zurück."""
     cache_key = (user_id, "scheduled", start_date.isoformat(), end_date.isoformat())
-    cached    = _cache.get(cache_key)
+    cached    = _cache_get(cache_key)
     if cached:
         age = (datetime.datetime.now() - cached["ts"]).total_seconds()
         if age < CACHE_TTL:
@@ -625,11 +691,11 @@ def get_scheduled_hours_cached(user_id: int, server: str, school: str,
         until_today, full_year = fetch_scheduled_hours(
             server, school, username, password, start_date, end_date,
         )
-        _cache[cache_key] = {
+        _cache_set(cache_key, {
             "until_today": until_today,
             "full_year":   full_year,
             "ts":          datetime.datetime.now(),
-        }
+        })
         return until_today, full_year, None
     except WebUntisError as e:
         if cached:

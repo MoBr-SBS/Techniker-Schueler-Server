@@ -1,12 +1,38 @@
+import datetime
+import threading
+
 from flask import (
     Blueprint, render_template, request, redirect, url_for,
     session, current_app, flash,
 )
 from werkzeug.security import check_password_hash, generate_password_hash
-from core import queries
+from core import queries, webuntis_client
 from core.encryption import derive_key, encrypt_with_key, decrypt_with_key, legacy_decrypt
 
 bp = Blueprint("auth", __name__)
+
+
+def _prefetch_webuntis(app, user_id: int, wt_key: bytes):
+    """Wärmt den WebUntis-Cache nach dem Login im Hintergrund auf."""
+    with app.app_context():
+        try:
+            creds = queries.get_webuntis_credentials(user_id)
+            if not creds:
+                return
+            server, school = queries.get_webuntis_config()
+            if not server or not school:
+                return
+            password = decrypt_with_key(creds["wt_password"], wt_key)
+            username = creds["wt_username"]
+            today    = datetime.date.today()
+            monday   = today - datetime.timedelta(days=today.weekday())
+            webuntis_client.get_timetable_cached(
+                user_id, server, school, username, password, monday)
+            webuntis_client.get_exams_cached(
+                user_id, server, school, username, password,
+                today, today + datetime.timedelta(days=180))
+        except Exception:
+            pass
 
 
 def _reencrypt_credentials(user_id: int, new_key: bytes):
@@ -66,6 +92,11 @@ def login():
             wt_key = derive_key(password, salt)
             session["wt_key"] = wt_key.decode()
             _migrate_credentials(user["id"], wt_key)
+            threading.Thread(
+                target=_prefetch_webuntis,
+                args=(current_app._get_current_object(), user["id"], wt_key),
+                daemon=True,
+            ).start()
             return redirect(url_for("dashboard.index"))
         error = "Ungültiger Benutzername oder Passwort."
     server_name, logo_url, favicon_url = _branding()
