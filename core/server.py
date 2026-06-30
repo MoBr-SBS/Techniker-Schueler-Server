@@ -30,18 +30,19 @@ def create_app(config: Config = None) -> Flask:
     from routes.pruefungen       import bp as pruefungen_bp
     from routes.abwesenheit      import bp as abwesenheit_bp
     from routes.server_status    import bp as server_status_bp
+    from routes.knowledgebase    import bp as knowledgebase_bp
 
     for bp in (dashboard_bp, stats_bp, settings_bp,
                noten_bp, auth_bp, admin_bp, profil_bp,
                mein_stundenplan_bp, pruefungen_bp, abwesenheit_bp,
-               server_status_bp):
+               server_status_bp, knowledgebase_bp):
         app.register_blueprint(bp)
 
     @app.before_request
     def require_login():
         if request.endpoint is None:
             return
-        public = {"auth.login", "auth.logout", "auth.register", "static"}
+        public = {"auth.login", "auth.logout", "auth.register", "auth.webuntis_setup", "static"}
         if request.endpoint not in public and "user_id" not in session:
             return redirect(url_for("auth.login"))
         if ("user_id" in session and not session.get("is_admin")
@@ -58,6 +59,7 @@ def create_app(config: Config = None) -> Flask:
         import datetime
         from core.nav import NAV_ITEMS
         from core.queries import get_app_setting
+        from core.i18n import t as _t, TRANSLATIONS
         from flask import url_for as _uf
 
         db_name = get_app_setting("server_name")
@@ -69,10 +71,24 @@ def create_app(config: Config = None) -> Flask:
         fav_file = get_app_setting("favicon_filename")
         favicon_url = _uf("static", filename=f"uploads/{fav_file}") if fav_file else None
 
+        # Aktuelle Sprache: Nutzer-Einstellung > System-Standard > 'de'
+        lang = session.get("lang") or get_app_setting("default_language", "de") or "de"
+
+        # Übersetzungsfunktion für Templates
+        def t(key: str) -> str:
+            return _t(key, lang)
+
+        # Nav-Labels übersetzen
+        translated_nav = []
+        for item in NAV_ITEMS:
+            nav_key = f"nav.{item['id']}"
+            label = _t(nav_key, lang) if nav_key in TRANSLATIONS else item["label"]
+            translated_nav.append({**item, "label": label})
+
         return {
             "current_user":       session.get("username"),
             "is_admin":           session.get("is_admin", False),
-            "nav":                NAV_ITEMS,
+            "nav":                translated_nav,
             "server_name":        server_name,
             "session":            session,
             "timedelta":          datetime.timedelta,
@@ -82,6 +98,8 @@ def create_app(config: Config = None) -> Flask:
             "favicon_url":        favicon_url,
             "maintenance_mode":   get_app_setting("maintenance_mode") == "1",
             "allow_registration": get_app_setting("allow_registration") == "1",
+            "lang":               lang,
+            "t":                  t,
         }
 
     return app

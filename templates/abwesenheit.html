@@ -1,22 +1,22 @@
 {% extends "base.html" %}
-{% block title %}Abwesenheit{% endblock %}
-{% block page_title %}Abwesenheit{% endblock %}
+{% block title %}{{ t('abs.page_title') }}{% endblock %}
+{% block page_title %}{{ t('abs.page_title') }}{% endblock %}
 
 {% block content %}
 
 {% if not configured %}
 <div class="empty-state">
   <i data-lucide="user-x"></i>
-  <p>WebUntis-Zugangsdaten noch nicht eingerichtet.</p>
+  <p>{{ t('abs.not_setup') }}</p>
   <a href="/profil" class="btn btn-primary" style="margin-top:8px">
-    <i data-lucide="settings"></i> Jetzt einrichten
+    <i data-lucide="settings"></i> {{ t('common.setup_now') }}
   </a>
 </div>
 
 {% elif error %}
 <div class="alert alert-error" style="margin-bottom:16px">
-  <strong>Abwesenheiten konnten nicht geladen werden:</strong> {{ error }}
-  &nbsp;–&nbsp;<a href="/profil" style="color:inherit;text-decoration:underline">Zugangsdaten prüfen</a>
+  <strong>{{ t('abs.load_error') }}</strong> {{ error }}
+  &nbsp;–&nbsp;<a href="/profil" style="color:inherit;text-decoration:underline">{{ t('common.check_creds') }}</a>
 </div>
 
 {% else %}
@@ -29,7 +29,7 @@
   </span>
   <form method="POST" action="/abwesenheit/aktualisieren">
     <button type="submit" class="btn btn-sm" style="background:var(--surface2);color:var(--text-dim)">
-      <i data-lucide="refresh-cw"></i> Aktualisieren
+      <i data-lucide="refresh-cw"></i> {{ t('common.refresh') }}
     </button>
   </form>
 </div>
@@ -44,28 +44,28 @@
     <div class="stat-icon"><i data-lucide="list"></i></div>
     <div class="stat-body">
       <div class="stat-value">{{ summary.total }}</div>
-      <div class="stat-label">Einträge gesamt</div>
+      <div class="stat-label">{{ t('abs.total') }}</div>
     </div>
   </div>
   <div class="stat-card accent-green">
     <div class="stat-icon"><i data-lucide="check-circle"></i></div>
     <div class="stat-body">
       <div class="stat-value">{{ summary.excused }}</div>
-      <div class="stat-label">Entschuldigt</div>
+      <div class="stat-label">{{ t('abs.excused') }}</div>
     </div>
   </div>
   <div class="stat-card accent-orange">
     <div class="stat-icon"><i data-lucide="alert-circle"></i></div>
     <div class="stat-body">
       <div class="stat-value">{{ summary.unexcused }}</div>
-      <div class="stat-label">Unentschuldigt</div>
+      <div class="stat-label">{{ t('abs.unexcused') }}</div>
     </div>
   </div>
   <div class="stat-card accent-purple">
     <div class="stat-icon"><i data-lucide="clock"></i></div>
     <div class="stat-body">
       <div class="stat-value">{{ summary.total_time }}</div>
-      <div class="stat-label">Gesamtzeit</div>
+      <div class="stat-label">{{ t('abs.total_time') }}</div>
     </div>
   </div>
 </div>
@@ -76,8 +76,8 @@
   <div class="widget">
     <div class="widget-header">
       <i data-lucide="shield-check"></i>
-      <span>BAföG Status</span>
-      <span class="bafog-header-info" data-tooltip="Automatisch berechnet – nicht offiziell. Abwesenheiten während Freistunden oder Fehlerfassungen können die Quote verfälschen.">
+      <span>{{ t('abs.bafog') }}</span>
+      <span class="bafog-header-info" data-tooltip="{{ t('abs.bafog_hint') }}">
         <i data-lucide="alert-circle"></i>
       </span>
     </div>
@@ -92,8 +92,8 @@
                  style="height:0;background:{{ bafog.color_now }}"></div>
           </div>
           <div class="bafog-label">
-            Bis heute
-            <span class="bafog-info" data-tooltip="Soll-Stunden bis heute: {{ bafog.soll_now_str }}">
+            {{ t('abs.until_today') }}
+            <span class="bafog-info" data-tooltip="{{ t('abs.soll_now') }} {{ bafog.soll_now_str }}">
               <i data-lucide="info"></i>
             </span>
           </div>
@@ -108,8 +108,8 @@
                  style="height:0;background:{{ bafog.color_year }}"></div>
           </div>
           <div class="bafog-label">
-            Schuljahr
-            <span class="bafog-info" data-tooltip="Soll-Stunden Schuljahr: {{ bafog.soll_year_str }}">
+            {{ t('abs.school_year') }}
+            <span class="bafog-info" data-tooltip="{{ t('abs.soll_year') }} {{ bafog.soll_year_str }}">
               <i data-lucide="info"></i>
             </span>
           </div>
@@ -132,8 +132,7 @@
       {% else %}
       <div style="text-align:center;padding:24px 0;color:var(--text-muted);font-size:0.8rem">
         <i data-lucide="loader" style="width:18px;height:18px;margin-bottom:8px;display:block;margin-inline:auto"></i>
-        Soll-Stunden werden beim ersten Aufruf aus dem Stundenplan berechnet.<br>
-        Seite kurz neu laden.
+        {{ t('abs.loading') | replace('\n', '<br>') | safe }}
       </div>
       {% endif %}
     </div>
@@ -143,7 +142,7 @@
   <div class="widget">
     <div class="widget-header">
       <i data-lucide="bar-chart-2"></i>
-      <span>Aufschlüsselung nach Grund</span>
+      <span>{{ t('abs.by_reason') }}</span>
     </div>
     <div class="widget-body">
       <div class="abs-reasons">
@@ -169,7 +168,7 @@
 
 {# ── Detailliste ─────────────────────────────────────────────────────────── #}
 {% if absences %}
-<div class="section-label">Alle Einträge</div>
+<div class="section-label">{{ t('abs.all_entries') }}</div>
 <div class="pruef-list">
   {% for a in absences %}
   <div class="pruef-item abs-item{% if not a.is_excused %} abs-item--unexcused{% endif %}">
@@ -185,11 +184,11 @@
         {{ a.reason }}
         {% if a.is_excused %}
         <span class="abs-status-badge abs-status-badge--ok">
-          <i data-lucide="check"></i> Entschuldigt
+          <i data-lucide="check"></i> {{ t('abs.excused_badge') }}
         </span>
         {% else %}
         <span class="abs-status-badge abs-status-badge--warn">
-          <i data-lucide="alert-triangle"></i> Unentschuldigt
+          <i data-lucide="alert-triangle"></i> {{ t('abs.unexcused_badge') }}
         </span>
         {% endif %}
       </div>
@@ -217,7 +216,7 @@
 {% else %}
 <div class="empty-state" style="margin-top:32px">
   <i data-lucide="check-circle"></i>
-  <p>Keine Abwesenheiten in diesem Schuljahr.</p>
+  <p>{{ t('abs.none') }}</p>
 </div>
 {% endif %}
 

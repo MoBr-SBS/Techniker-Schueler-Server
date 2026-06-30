@@ -200,6 +200,12 @@ def get_all_users():
     ).fetchall()
 
 
+def set_user_language(user_id: int, lang: str):
+    db = get_db()
+    db.execute("UPDATE users SET language=? WHERE id=?", (lang, user_id))
+    db.commit()
+
+
 def update_user_klasse(user_id, klasse_id, klasse_name=None):
     db = get_db()
     db.execute(

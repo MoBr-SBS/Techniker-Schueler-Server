@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="{{ lang }}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ server_name }} – Anmelden</title>
+  <title>{{ server_name }} – {{ t('auth.login_heading') }}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="/static/js/lucide.min.js"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
   {% if favicon_url %}<link rel="icon" href="{{ favicon_url }}">{% endif %}
 </head>
@@ -24,8 +24,8 @@
     </div>
 
     <div>
-      <h1 class="login-heading">Anmelden</h1>
-      <p class="login-sub">Bitte melde dich mit deinen Zugangsdaten an.</p>
+      <h1 class="login-heading">{{ t('auth.login_heading') }}</h1>
+      <p class="login-sub">{{ t('auth.login_sub') }}</p>
     </div>
 
     {% if error %}
@@ -33,21 +33,21 @@
     {% endif %}
 
     <form method="POST" action="/login" class="vform">
-      <label>Benutzername
+      <label>{{ t('auth.username') }}
         <input type="text" name="username" autocomplete="username" autofocus required>
       </label>
-      <label>Passwort
+      <label>{{ t('auth.password') }}
         <input type="password" name="password" autocomplete="current-password" required>
       </label>
       <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center">
-        Anmelden
+        {{ t('auth.login_btn') }}
       </button>
     </form>
 
     {% if allow_registration %}
     <p style="text-align:center;margin-top:16px;font-size:0.82rem;color:var(--text-muted)">
-      Noch kein Konto?
-      <a href="/register" style="color:var(--accent)">Registrieren</a>
+      {{ t('auth.no_account') }}
+      <a href="/register" style="color:var(--accent)">{{ t('auth.register_link') }}</a>
     </p>
     {% endif %}
 

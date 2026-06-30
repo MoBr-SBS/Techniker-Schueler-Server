@@ -1,6 +1,6 @@
 {% extends "base.html" %}
-{% block title %}Dashboard{% endblock %}
-{% block page_title %}Dashboard{% endblock %}
+{% block title %}{{ t('dash.page_title') }}{% endblock %}
+{% block page_title %}{{ t('dash.page_title') }}{% endblock %}
 
 {% block content %}
 
@@ -13,9 +13,9 @@
     <div class="stat-body">
       {% if next_exam %}
       <div class="stat-value">
-        {% if next_exam.days == 0 %}Heute
-        {% elif next_exam.days == 1 %}Morgen
-        {% else %}{{ next_exam.days }} Tage
+        {% if next_exam.days == 0 %}{{ t('common.today') }}
+        {% elif next_exam.days == 1 %}{{ t('common.tomorrow') }}
+        {% else %}{{ next_exam.days }} {{ t('common.days_n') }}
         {% endif %}
       </div>
       <div class="stat-label">
@@ -24,7 +24,7 @@
       </div>
       {% else %}
       <div class="stat-value">–</div>
-      <div class="stat-label">Keine Prüfung</div>
+      <div class="stat-label">{{ t('dash.no_exam') }}</div>
       {% endif %}
     </div>
   </a>
@@ -36,7 +36,7 @@
       <div class="stat-value">
         {% if gesamt_schnitt %}{{ "%.2f"|format(gesamt_schnitt) }}{% else %}–{% endif %}
       </div>
-      <div class="stat-label">Noten-Ø gesamt</div>
+      <div class="stat-label">{{ t('dash.avg_total') }}</div>
     </div>
   </a>
 
@@ -45,7 +45,7 @@
     <div class="stat-icon"><i data-lucide="{% if offene_bewertungen > 0 %}edit{% else %}check-circle{% endif %}"></i></div>
     <div class="stat-body">
       <div class="stat-value">{{ offene_bewertungen }}</div>
-      <div class="stat-label">Offen{% if offene_bewertungen != 1 %}e{% endif %} Bewertung{% if offene_bewertungen != 1 %}en{% endif %}</div>
+      <div class="stat-label">{{ t('dash.open_ratings_s') if offene_bewertungen == 1 else t('dash.open_ratings_p') }}</div>
     </div>
   </a>
 
@@ -54,7 +54,7 @@
     <div class="stat-icon"><i data-lucide="calendar-check"></i></div>
     <div class="stat-body">
       <div class="stat-value">{{ pruef_diese_woche }}</div>
-      <div class="stat-label">Prüfung{% if pruef_diese_woche != 1 %}en{% endif %} diese Woche</div>
+      <div class="stat-label">{{ t('dash.exams_week_s') if pruef_diese_woche == 1 else t('dash.exams_week_p') }}</div>
     </div>
   </a>
 
@@ -74,12 +74,12 @@
       {% if is_weekend %}
       <div class="db-empty-small">
         <i data-lucide="coffee"></i>
-        <span>Wochenende</span>
+        <span>{{ t('dash.weekend') }}</span>
       </div>
       {% elif sp_not_configured %}
       <div class="db-empty-small">
         <i data-lucide="zap"></i>
-        <span>WebUntis nicht eingerichtet</span>
+        <span>{{ t('dash.wu_not_setup') }}</span>
       </div>
       {% elif heute_slots %}
       <div class="db-today-list">
@@ -103,7 +103,7 @@
       {% else %}
       <div class="db-empty-small">
         <i data-lucide="calendar-x"></i>
-        <span>Kein Unterricht heute</span>
+        <span>{{ t('dash.no_lessons') }}</span>
       </div>
       {% endif %}
     </div>
@@ -113,8 +113,8 @@
   <div class="widget db-widget-exams">
     <div class="widget-header">
       <i data-lucide="clipboard-list"></i>
-      <span>Nächste Prüfungen</span>
-      <a href="/pruefungen" class="widget-header-link">Alle <i data-lucide="arrow-right"></i></a>
+      <span>{{ t('dash.next_exams') }}</span>
+      <a href="/pruefungen" class="widget-header-link">{{ t('common.all') }} <i data-lucide="arrow-right"></i></a>
     </div>
     <div class="widget-body">
       {% if next_5_exams %}
@@ -132,9 +132,9 @@
             </span>
           </div>
           <span class="db-exam-countdown">
-            {% if exam.days == 0 %}Heute
-            {% elif exam.days == 1 %}Morgen
-            {% else %}{{ exam.days }} Tage
+            {% if exam.days == 0 %}{{ t('common.today') }}
+            {% elif exam.days == 1 %}{{ t('common.tomorrow') }}
+            {% else %}{{ exam.days }} {{ t('common.days_n') }}
             {% endif %}
           </span>
         </div>
@@ -143,7 +143,7 @@
       {% else %}
       <div class="db-empty-small">
         <i data-lucide="calendar-check"></i>
-        <span>Keine bevorstehenden Prüfungen</span>
+        <span>{{ t('dash.no_exams') }}</span>
       </div>
       {% endif %}
     </div>
@@ -153,8 +153,8 @@
   <div class="widget db-widget-noten">
     <div class="widget-header">
       <i data-lucide="award"></i>
-      <span>Letzte Noten</span>
-      <a href="/noten" class="widget-header-link">Alle <i data-lucide="arrow-right"></i></a>
+      <span>{{ t('dash.last_grades') }}</span>
+      <a href="/noten" class="widget-header-link">{{ t('common.all') }} <i data-lucide="arrow-right"></i></a>
     </div>
     <div class="widget-body">
       {% if recent_noten %}
@@ -173,7 +173,7 @@
       {% else %}
       <div class="db-empty-small">
         <i data-lucide="award"></i>
-        <span>Noch keine Noten eingetragen</span>
+        <span>{{ t('dash.no_grades') }}</span>
       </div>
       {% endif %}
     </div>

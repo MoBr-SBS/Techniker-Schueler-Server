@@ -7,6 +7,7 @@ from core.webuntis_client import (get_absences_cached, invalidate_absence_cache,
                                   get_scheduled_hours_cached,
                                   _count_absent_lesson_minutes)
 from core.nav import NAV_ITEMS
+from core.i18n import weekday_short
 
 bp = Blueprint("abwesenheit", __name__)
 
@@ -82,9 +83,6 @@ def _compute_summary(absences: list) -> dict:
     }
 
 
-_WOCHENTAGE = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
-
-
 @bp.route("/abwesenheit")
 def index():
     creds = queries.get_webuntis_credentials(session["user_id"])
@@ -103,8 +101,9 @@ def index():
         start, end,
     )
 
+    lang = session.get("lang") or queries.get_app_setting("default_language", "de") or "de"
     for a in absences:
-        a["wochentag"] = _WOCHENTAGE[a["datum"].weekday()]
+        a["wochentag"] = weekday_short(a["datum"].weekday(), lang)
 
     summary = _compute_summary(absences)
 

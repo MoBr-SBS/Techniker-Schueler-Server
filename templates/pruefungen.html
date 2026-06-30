@@ -1,23 +1,20 @@
 {% extends "base.html" %}
-{% block title %}Prüfungen{% endblock %}
-{% block page_title %}Prüfungen{% endblock %}
+{% block title %}{{ t('pruef.page_title') }}{% endblock %}
+{% block page_title %}{{ t('pruef.page_title') }}{% endblock %}
 
 {% block content %}
 
 {# ── Topbar ────────────────────────────────────────────────────────────────── #}
 <div class="pruef-topbar">
-  <a href="/mein-stundenplan" class="btn btn-sm" style="background:var(--surface2);color:var(--text-dim);margin-right:auto">
-    <i data-lucide="plus-circle"></i> Ex eintragen
-  </a>
   {% if wt_configured %}
   <form method="POST" action="/pruefungen/aktualisieren">
     <button type="submit" class="btn btn-sm" style="background:var(--surface2);color:var(--text-dim)">
-      <i data-lucide="refresh-cw"></i> Aktualisieren
+      <i data-lucide="refresh-cw"></i> {{ t('common.refresh') }}
     </button>
   </form>
   {% else %}
   <a href="/profil" class="btn btn-sm" style="background:var(--surface2);color:var(--text-dim)">
-    <i data-lucide="settings"></i> WebUntis einrichten
+    <i data-lucide="settings"></i> {{ t('common.setup_webuntis') }}
   </a>
   {% endif %}
 </div>
@@ -25,8 +22,8 @@
 {# ── Warnungen ─────────────────────────────────────────────────────────────── #}
 {% if wt_error %}
 <div class="alert alert-error" style="margin-bottom:16px">
-  <strong>WebUntis nicht erreichbar:</strong> {{ wt_error }}
-  &nbsp;–&nbsp;<a href="/profil" style="color:inherit;text-decoration:underline">Zugangsdaten prüfen</a>
+  <strong>{{ t('pruef.wu_unreachable') }}</strong> {{ wt_error }}
+  &nbsp;–&nbsp;<a href="/profil" style="color:inherit;text-decoration:underline">{{ t('common.check_creds') }}</a>
 </div>
 {% elif warning %}
 <div class="alert alert-info" style="margin-bottom:16px">{{ warning }}</div>
@@ -34,7 +31,7 @@
 
 {# ── Bevorstehende Prüfungen ───────────────────────────────────────────────── #}
 {% if upcoming %}
-<div class="section-label">Bevorstehende Prüfungen</div>
+<div class="section-label">{{ t('pruef.upcoming') }}</div>
 <div class="pruef-list">
   {% for exam in upcoming %}
   <div class="pruef-item{% if exam.heute %} pruef-item--heute{% endif %}{% if exam.source == 'manual' %} pruef-item--manual{% endif %}">
@@ -47,12 +44,12 @@
     <div class="pruef-main">
       <div class="pruef-fach">
         {{ exam.fach }}
-        {% if exam.heute %}<span class="pruef-heute-badge">Heute</span>{% endif %}
+        {% if exam.heute %}<span class="pruef-heute-badge">{{ t('pruef.heute_badge') }}</span>{% endif %}
         <span class="pruef-art-badge pruef-art--{{ exam.art | lower | replace('schulaufgabe','sa') }}">
           {{ exam.art | replace('Schulaufgabe', 'SA') }}
         </span>
         {% if exam.source == 'manual' %}
-        <span class="pruef-source-badge pruef-source-badge--manual"><i data-lucide="pencil"></i> Manuell</span>
+        <span class="pruef-source-badge pruef-source-badge--manual"><i data-lucide="pencil"></i> {{ t('common.manual') }}</span>
         {% else %}
         <span class="pruef-source-badge pruef-source-badge--untis"><i data-lucide="zap"></i> Untis</span>
         {% endif %}
@@ -72,13 +69,16 @@
 
     <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-shrink:0">
       <span class="pruef-countdown">
-        {% if exam.heute %}–{% elif exam.days == 1 %}Morgen{% else %}in {{ exam.days }} Tagen{% endif %}
+        {% if exam.heute %}–
+        {% elif exam.days == 1 %}{{ t('pruef.morgen') }}
+        {% else %}{{ t('common.days_in_n') }} {{ exam.days }} {{ t('common.days_n') }}
+        {% endif %}
       </span>
 
       {% if exam.source == 'manual' and can_add %}
       <form method="POST" action="/pruefungen/manuell/{{ exam.id }}/loeschen"
-            style="display:inline" onsubmit="return confirm('Eintrag löschen?')">
-        <button type="submit" class="btn-icon-del" title="Löschen"><i data-lucide="trash-2"></i></button>
+            style="display:inline" onsubmit="return confirm('{{ t('pruef.add_confirm') }}')">
+        <button type="submit" class="btn-icon-del" title="{{ t('common.delete') }}"><i data-lucide="trash-2"></i></button>
       </form>
       {% endif %}
 
@@ -87,7 +87,7 @@
                   datum_str=exam.datum.strftime('%d.%m.%Y')) }}"
          class="btn btn-sm {% if exam.has_note %}btn-primary{% endif %}"
          style="{% if not exam.has_note %}background:var(--surface2);color:var(--text-dim);{% endif %}"
-         title="{% if exam.has_note %}Notiz ansehen{% else %}Notiz anlegen{% endif %}">
+         title="{% if exam.has_note %}{{ t('pruef.notiz_view') }}{% else %}{{ t('pruef.notiz_add') }}{% endif %}">
         <i data-lucide="{% if exam.has_note %}book-open{% else %}file-plus{% endif %}"></i>
       </a>
     </div>
@@ -98,13 +98,13 @@
 {% else %}
 <div class="empty-state" style="margin-top:32px">
   <i data-lucide="calendar-check"></i>
-  <p>Keine bevorstehenden Prüfungen.</p>
+  <p>{{ t('pruef.no_upcoming') }}</p>
 </div>
 {% endif %}
 
 {# ── Vergangene Prüfungen ──────────────────────────────────────────────────── #}
 {% if past %}
-<div class="section-label mt-20">Vergangene Prüfungen</div>
+<div class="section-label mt-20">{{ t('pruef.past') }}</div>
 <div class="pruef-list">
   {% for exam in past %}
   <div class="pruef-item pruef-item--past{% if exam.source == 'manual' %} pruef-item--manual{% endif %}">
@@ -121,7 +121,7 @@
           {{ exam.art | replace('Schulaufgabe', 'SA') }}
         </span>
         {% if exam.source == 'manual' %}
-        <span class="pruef-source-badge pruef-source-badge--manual"><i data-lucide="pencil"></i> Manuell</span>
+        <span class="pruef-source-badge pruef-source-badge--manual"><i data-lucide="pencil"></i> {{ t('common.manual') }}</span>
         {% else %}
         <span class="pruef-source-badge pruef-source-badge--untis"><i data-lucide="zap"></i> Untis</span>
         {% endif %}
@@ -140,15 +140,15 @@
     <div style="display:flex;align-items:center;gap:8px;margin-left:auto;flex-shrink:0">
       {% if exam.source == 'manual' and can_add %}
       <form method="POST" action="/pruefungen/manuell/{{ exam.id }}/loeschen"
-            style="display:inline" onsubmit="return confirm('Eintrag löschen?')">
-        <button type="submit" class="btn-icon-del" title="Löschen"><i data-lucide="trash-2"></i></button>
+            style="display:inline" onsubmit="return confirm('{{ t('pruef.add_confirm') }}')">
+        <button type="submit" class="btn-icon-del" title="{{ t('common.delete') }}"><i data-lucide="trash-2"></i></button>
       </form>
       {% endif %}
       {% if exam.has_note %}
       <a href="{{ url_for('pruefungen.notiz', exam_key=exam.exam_key,
                   fach=exam.fach, name=exam.get('name',''), art=exam.art,
                   datum_str=exam.datum.strftime('%d.%m.%Y')) }}"
-         class="btn btn-sm" style="background:var(--surface2);color:var(--text-dim)" title="Notiz ansehen">
+         class="btn btn-sm" style="background:var(--surface2);color:var(--text-dim)" title="{{ t('pruef.notiz_view') }}">
         <i data-lucide="book-open"></i>
       </a>
       {% endif %}
@@ -165,36 +165,36 @@
   <button type="button" class="btn btn-sm manual-entry-toggle" id="admin-pruef-toggle"
           onclick="toggleAdminPruef()">
     <i data-lucide="plus" id="admin-pruef-icon"></i>
-    Prüfung eintragen
+    {{ t('pruef.add') }}
   </button>
   <div id="admin-pruef-section" style="display:none" class="manual-form-card">
     <form method="POST" action="/pruefungen/manuell/hinzufuegen" class="manual-inline-form">
       <input type="hidden" name="_return" value="{{ url_for('pruefungen.index') }}">
       <div class="manual-form-row">
         <div class="manual-form-field">
-          <label>Fach *</label>
+          <label>{{ t('common.subject') }} *</label>
           <input type="text" name="fach" placeholder="z. B. Mathematik" required>
         </div>
         <div class="manual-form-field manual-form-field--sm">
-          <label>Art *</label>
+          <label>{{ t('common.type') }} *</label>
           <select name="art">
             <option value="Ex">Ex</option>
             <option value="SA">SA</option>
           </select>
         </div>
         <div class="manual-form-field manual-form-field--sm">
-          <label>Datum *</label>
+          <label>{{ t('common.date') }} *</label>
           <input type="date" name="datum" required>
         </div>
         <div class="manual-form-field">
-          <label>Notiz</label>
+          <label>{{ t('common.note_field') }}</label>
           <input type="text" name="notiz" placeholder="z. B. Kapitel 3–5">
         </div>
         {% if is_admin and klassen %}
         <div class="manual-form-field manual-form-field--sm">
-          <label>Klasse</label>
+          <label>{{ t('common.class') }}</label>
           <select name="klasse_id">
-            <option value="">Global (alle)</option>
+            <option value="">{{ t('common.global_all') }}</option>
             {% for k in klassen %}
             <option value="{{ k.klasse_id }}">{{ k.klasse_name }}</option>
             {% endfor %}
@@ -203,7 +203,7 @@
         {% endif %}
         <div class="manual-form-field manual-form-field--btn">
           <label>&nbsp;</label>
-          <button type="submit" class="btn btn-primary">Eintragen</button>
+          <button type="submit" class="btn btn-primary">{{ t('common.add') }}</button>
         </div>
       </div>
     </form>

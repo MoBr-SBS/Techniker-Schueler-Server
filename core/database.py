@@ -120,6 +120,11 @@ def init_db():
         db.execute("ALTER TABLE webuntis_credentials ADD COLUMN uses_user_key INTEGER NOT NULL DEFAULT 0")
         db.commit()
 
+    # Migration: language in users
+    if "language" not in users_cols:
+        db.execute("ALTER TABLE users ADD COLUMN language TEXT DEFAULT NULL")
+        db.commit()
+
     # Migration: klasse_id + klasse_name + role in users
     if "klasse_id" not in users_cols:
         db.execute("ALTER TABLE users ADD COLUMN klasse_id INTEGER DEFAULT NULL")
@@ -180,6 +185,34 @@ def init_db():
         db.execute("UPDATE noten SET art='SA' WHERE beschreibung='SA'")
         db.execute("UPDATE noten SET art='Ex' WHERE beschreibung='Ex'")
         db.commit()
+
+    # Knowledgebase tables
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS kb_categories (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            name       TEXT NOT NULL,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            visible    INTEGER NOT NULL DEFAULT 1
+        )
+    """)
+    # Migration: visible column for kb_categories
+    kb_cat_cols = [row[1] for row in db.execute("PRAGMA table_info(kb_categories)").fetchall()]
+    if "visible" not in kb_cat_cols:
+        db.execute("ALTER TABLE kb_categories ADD COLUMN visible INTEGER NOT NULL DEFAULT 1")
+        db.commit()
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS kb_pages (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            category_id INTEGER REFERENCES kb_categories(id) ON DELETE SET NULL,
+            title       TEXT NOT NULL,
+            content     TEXT NOT NULL DEFAULT '',
+            visible     INTEGER NOT NULL DEFAULT 1,
+            sort_order  INTEGER NOT NULL DEFAULT 0,
+            created_at  TEXT DEFAULT (datetime('now')),
+            updated_at  TEXT DEFAULT (datetime('now')),
+            updated_by  TEXT NOT NULL DEFAULT ''
+        )
+    """)
 
     if db.execute("SELECT COUNT(*) FROM users").fetchone()[0] == 0:
         from werkzeug.security import generate_password_hash

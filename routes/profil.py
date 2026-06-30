@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, session, flash
+from core.i18n import t as _t
 from werkzeug.security import check_password_hash, generate_password_hash
 from core import queries
 from core.encryption import derive_key, encrypt_with_key, decrypt_with_key
@@ -65,39 +66,41 @@ def save_webuntis():
     wt_user   = request.form["wt_username"].strip()
     wt_pass   = request.form.get("wt_password", "")
     confirmed = request.form.get("hinweis_bestaetigt")
+    from_setup = request.form.get("from_setup")
+
+    def _error_redirect(msg):
+        flash(msg, "error")
+        if from_setup:
+            session["needs_webuntis_setup"] = True
+        return redirect(url_for("profil.index") if not from_setup else url_for("dashboard.index"))
 
     server, school = queries.get_webuntis_config()
     if not server or not school:
-        flash("WebUntis ist noch nicht vom Administrator konfiguriert.", "error")
-        return redirect(url_for("profil.index"))
+        return _error_redirect("WebUntis ist noch nicht vom Administrator konfiguriert.")
     if not confirmed:
-        flash("Bitte bestätige den Sicherheitshinweis.", "error")
-        return redirect(url_for("profil.index"))
+        return _error_redirect("Bitte bestätige den Sicherheitshinweis.")
     if not wt_user:
-        flash("Benutzername ist Pflicht.", "error")
-        return redirect(url_for("profil.index"))
+        return _error_redirect("Benutzername ist Pflicht.")
 
     wt_key = session.get("wt_key", "").encode()
     creds  = queries.get_webuntis_credentials(session["user_id"])
     if not wt_pass and creds:
-        # Passwort unverändert – bestehenden verschlüsselten Wert behalten
         queries.save_webuntis_credentials(
             session["user_id"], wt_user, creds["wt_password"],
             uses_user_key=bool(creds["uses_user_key"]),
         )
         invalidate_cache(session["user_id"])
+        session.pop("needs_webuntis_setup", None)
         flash("Benutzername aktualisiert.", "success")
-        return redirect(url_for("profil.index"))
+        return redirect(url_for("profil.index") if not from_setup else url_for("dashboard.index"))
 
     if not wt_pass:
-        flash("Passwort ist Pflicht.", "error")
-        return redirect(url_for("profil.index"))
+        return _error_redirect("Passwort ist Pflicht.")
 
     try:
         grid, _, _, klasse_id, klasse_name = fetch_timetable(server, school, wt_user, wt_pass)
     except WebUntisError as e:
-        flash(f"Verbindung fehlgeschlagen: {e}", "error")
-        return redirect(url_for("profil.index"))
+        return _error_redirect(f"Verbindung fehlgeschlagen: {e}")
 
     queries.save_webuntis_credentials(
         session["user_id"], wt_user, encrypt_with_key(wt_pass, wt_key), uses_user_key=True,
@@ -113,7 +116,19 @@ def save_webuntis():
             }
             queries.set_klasse_faecher(klasse_id, faecher)
     invalidate_cache(session["user_id"])
+    session.pop("needs_webuntis_setup", None)
     flash("WebUntis-Zugangsdaten gespeichert. Verbindung erfolgreich getestet.", "success")
+    return redirect(url_for("profil.index") if not from_setup else url_for("dashboard.index"))
+
+
+@bp.route("/profil/sprache", methods=["POST"])
+def change_language():
+    lang = request.form.get("language", "de")
+    if lang not in ("de", "en"):
+        lang = "de"
+    queries.set_user_language(session["user_id"], lang)
+    session["lang"] = lang
+    flash(_t("profil.lang_saved", lang), "success")
     return redirect(url_for("profil.index"))
 
 

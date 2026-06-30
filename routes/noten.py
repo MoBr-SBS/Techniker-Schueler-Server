@@ -74,13 +74,15 @@ def index():
         avg_ex = round(sum(n["note"] for n in ex_notes) / len(ex_notes), 2) if ex_notes else None
 
         summaries.append({
-            "fach":    fach,
-            "noten":   noten_list,
-            "schnitt": avg,
-            "avg_sa":  avg_sa,
-            "avg_ex":  avg_ex,
-            "color":   _grade_color(avg),
-            "count":   len(noten_list),
+            "fach":     fach,
+            "noten":    noten_list,
+            "schnitt":  avg,
+            "avg_sa":   avg_sa,
+            "avg_ex":   avg_ex,
+            "sa_count": len(sa_notes),
+            "ex_count": len(ex_notes),
+            "color":    _grade_color(avg),
+            "count":    len(noten_list),
         })
     summaries.sort(key=lambda x: x["fach"])
 

@@ -5,10 +5,10 @@ from core.nav import NAV_ITEMS
 from core.exam_utils import load_webuntis_exams, load_manual_exams
 from core.encryption import decrypt_with_key
 from core.webuntis_client import get_timetable_cached
+from core.i18n import weekday_long
+from core import queries as _q
 
 bp = Blueprint("dashboard", __name__)
-
-_WOCHENTAGE_LANG = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag", "Samstag", "Sonntag"]
 
 
 def _grade_color(avg):
@@ -98,7 +98,8 @@ def index():
 
     # ── Stundenplan heute (WebUntis) ───────────────────────────────────────────
     heute_slots, sp_warning = _load_today_timetable(user_id, today)
-    heute_label = _WOCHENTAGE_LANG[today.weekday()]
+    lang = session.get("lang") or _q.get_app_setting("default_language", "de") or "de"
+    heute_label = weekday_long(today.weekday(), lang)
 
     return render_template(
         "dashboard.html",

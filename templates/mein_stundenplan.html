@@ -12,6 +12,14 @@
   var content  = document.getElementById('sp-content');
   var editMode = false;
 
+  var overlay = document.createElement('div');
+  overlay.className = 'sp-loading-overlay';
+  overlay.innerHTML = '<div class="sp-loading-spinner"></div>';
+  content.appendChild(overlay);
+
+  function showLoader() { overlay.classList.add('sp-loading-overlay--visible'); }
+  function hideLoader() { overlay.classList.remove('sp-loading-overlay--visible'); }
+
   function applyEditMode() {
     var wrap = content.querySelector('#sp-table-wrap');
     var btn  = content.querySelector('#sp-edit-toggle');
@@ -37,8 +45,7 @@
   }
 
   function loadWeek(url) {
-    content.style.opacity  = '0.35';
-    content.style.transition = 'opacity 0.12s';
+    showLoader();
 
     fetch(url, {
       credentials: 'same-origin',
@@ -50,10 +57,10 @@
     })
     .then(function (html) {
       content.innerHTML = html;
+      content.appendChild(overlay);
       history.pushState(null, '', url);
       lucide.createIcons();
-      content.style.transition = 'opacity 0.1s';
-      content.style.opacity    = '1';
+      hideLoader();
       attachListeners();
       prefetchEdges();
     })
@@ -83,6 +90,11 @@
         editMode = !editMode;
         applyEditMode();
       });
+    }
+
+    var aktuForm = content.querySelector('form[action*="aktualisieren"]');
+    if (aktuForm) {
+      aktuForm.addEventListener('submit', function () { showLoader(); });
     }
 
     applyEditMode();

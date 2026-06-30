@@ -132,6 +132,12 @@ a { text-decoration: none; color: inherit; }
 }
 
 /* Admin section */
+.sidebar-spacer { flex: 1; }
+.sidebar-bottom-nav {
+  padding: 6px 10px 2px;
+  border-top: 1px solid var(--border);
+}
+
 .sidebar-admin {
   padding: 6px 10px 8px;
   border-top: 1px solid var(--border);
@@ -1086,6 +1092,187 @@ a { text-decoration: none; color: inherit; }
 }
 .graded-toggle-btn i { width: 13px; height: 13px; }
 
+/* ── Gesamtschnitt Gauge ──────────────────────────────────────────────────── */
+.gesamt-schnitt-bar { flex-wrap: wrap; gap: 12px 24px; }
+.gs-left { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.gs-gauge-wrap { flex: 1; min-width: 180px; }
+.gs-gauge-track {
+  position: relative;
+  height: 6px;
+  background: var(--surface2);
+  border-radius: 999px;
+  overflow: visible;
+  margin-bottom: 4px;
+}
+.gs-gauge-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+.gs-gauge-fill--green  { background: var(--green); }
+.gs-gauge-fill--blue   { background: var(--blue); }
+.gs-gauge-fill--orange { background: var(--orange); }
+.gs-gauge-fill--red    { background: var(--red); }
+.gs-gauge-marker {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid var(--text-muted);
+  transition: left 0.4s ease;
+}
+.gs-gauge-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  padding: 0 1px;
+}
+
+/* ── Fach-Karten Fortschrittsbalken ──────────────────────────────────────── */
+.ns-bar-track {
+  height: 3px;
+  background: var(--surface2);
+  border-radius: 999px;
+  margin: 6px 0 4px;
+  overflow: hidden;
+}
+.ns-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+.ns-bar-fill--green  { background: var(--green); }
+.ns-bar-fill--blue   { background: var(--blue); }
+.ns-bar-fill--orange { background: var(--orange); }
+.ns-bar-fill--red    { background: var(--red); }
+
+/* ── Fach-Karte klickbar ──────────────────────────────────────────────────── */
+.noten-summary-card { cursor: pointer; transition: border-color var(--transition), transform 0.15s, box-shadow 0.15s; }
+.noten-summary-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(0,0,0,0.12); }
+.ns-top-row { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+.ns-fach { margin-bottom: 0; }
+.ns-sim-hint { color: var(--text-muted); opacity: 0.5; transition: opacity 0.15s; }
+.ns-sim-hint svg { width: 13px; height: 13px; }
+.noten-summary-card:hover .ns-sim-hint { opacity: 1; color: var(--accent); }
+
+/* ── Simulator Modal ──────────────────────────────────────────────────────── */
+.sim-overlay {
+  position: fixed; inset: 0; z-index: 900;
+  background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+.sim-overlay--open { opacity: 1; pointer-events: all; }
+.sim-overlay--open .sim-modal { transform: translateY(0); opacity: 1; }
+
+.sim-modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius) * 1.5);
+  padding: 24px;
+  width: 100%; max-width: 480px;
+  max-height: 90vh; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 20px;
+  transform: translateY(16px); opacity: 0;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+}
+
+.sim-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.sim-modal-title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 1rem; font-weight: 700; color: var(--text);
+}
+.sim-modal-title svg { width: 18px; height: 18px; color: var(--accent); }
+.sim-modal-close {
+  background: none; border: none; cursor: pointer; padding: 4px;
+  color: var(--text-muted); border-radius: var(--radius);
+  display: flex; align-items: center;
+  transition: color var(--transition), background var(--transition);
+}
+.sim-modal-close:hover { color: var(--text); background: var(--surface2); }
+.sim-modal-close svg { width: 18px; height: 18px; }
+
+.sim-current-block {
+  display: flex; gap: 20px; flex-wrap: wrap;
+  background: var(--surface2); border-radius: var(--radius);
+  padding: 14px 16px;
+}
+.sim-stat { display: flex; flex-direction: column; gap: 2px; }
+.sim-stat-label { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-muted); }
+.sim-stat-value { font-size: 1.4rem; font-weight: 800; font-family: var(--font-mono); color: var(--text); line-height: 1; }
+.sim-stat-value--sm { font-size: 1rem; }
+
+.sim-gauge-wrap { width: 100%; }
+.sim-gauge-track {
+  position: relative; height: 8px;
+  background: var(--surface2); border-radius: 999px; overflow: visible;
+  margin-bottom: 4px;
+}
+.sim-gauge-base {
+  position: absolute; top: 0; left: 0; height: 100%;
+  border-radius: 999px; opacity: 0.35;
+  transition: width 0.4s ease;
+}
+.sim-gauge-proj {
+  position: absolute; top: 0; left: 0; height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease, background 0.3s;
+}
+.sim-gauge-marker {
+  position: absolute; top: 50%; transform: translate(-50%, -50%);
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--surface); border: 2px solid var(--text-muted);
+  transition: left 0.4s ease;
+}
+.sim-gauge-marker--base { z-index: 2; opacity: 0.5; }
+.sim-gauge-marker--proj { z-index: 3; }
+.sim-gauge-labels { display: flex; justify-content: space-between; font-size: 0.62rem; color: var(--text-muted); padding: 0 1px; }
+
+.sim-input-section { display: flex; flex-direction: column; gap: 10px; }
+.sim-input-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-muted); }
+.sim-input-row { display: flex; gap: 8px; align-items: center; }
+.sim-select, .sim-input {
+  height: 36px; padding: 0 10px; font-size: 0.85rem;
+  border-radius: var(--radius); border: 1px solid var(--border);
+  background: var(--surface2); color: var(--text);
+}
+.sim-select { width: 70px; flex-shrink: 0; }
+.sim-input { flex: 1; min-width: 0; }
+.sim-select:focus, .sim-input:focus { outline: none; border-color: var(--accent); }
+
+.sim-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.sim-note-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 0.75rem; font-family: var(--font-mono); font-weight: 700;
+  padding: 3px 8px; border-radius: 999px; border: 1px solid currentColor;
+}
+.sim-note-chip button { background: none; border: none; cursor: pointer; padding: 0; display: flex; color: inherit; opacity: 0.6; }
+.sim-note-chip button:hover { opacity: 1; }
+.sim-note-chip svg { width: 11px; height: 11px; }
+.sim-note-chip--green  { color: var(--green);  background: color-mix(in srgb, var(--green)  10%, transparent); }
+.sim-note-chip--blue   { color: var(--blue);   background: color-mix(in srgb, var(--blue)   10%, transparent); }
+.sim-note-chip--orange { color: var(--orange); background: color-mix(in srgb, var(--orange) 10%, transparent); }
+.sim-note-chip--red    { color: var(--red);    background: color-mix(in srgb, var(--red)    10%, transparent); }
+
+.sim-proj-block { display: flex; flex-direction: column; gap: 10px; }
+.sim-proj-arrow { display: flex; justify-content: center; color: var(--text-muted); }
+.sim-proj-arrow svg { width: 18px; height: 18px; }
+.sim-proj-result {
+  background: var(--surface2); border-radius: var(--radius);
+  padding: 14px 16px; border: 1px solid var(--border);
+}
+.sim-proj-inner { display: flex; gap: 20px; flex-wrap: wrap; }
+.sim-reset-btn { align-self: flex-start; }
+
 .manual-entry-wrap { display: flex; flex-direction: column; gap: 8px; }
 .manual-entry-toggle {
   align-self: flex-start;
@@ -1530,6 +1717,35 @@ a.sp-pruef-pill:hover { filter: brightness(1.2); }
 .sp-absent-icon i { width: 13px; height: 13px; }
 .sp-absent-icon--excused   { color: var(--orange); }
 .sp-absent-icon--unexcused { color: var(--red); }
+
+/* ── Stundenplan Lade-Overlay ────────────────────────────────────────────── */
+.sp-loading-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(var(--bg-rgb, 18,18,18), 0.55);
+  backdrop-filter: blur(1px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+  border-radius: 8px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+.sp-loading-overlay.sp-loading-overlay--visible {
+  opacity: 1;
+  pointer-events: all;
+}
+.sp-loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid var(--border);
+  border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: sp-spin 0.7s linear infinite;
+}
+#sp-content { position: relative; }
 
 /* ── Abwesenheit ─────────────────────────────────────────────────────────── */
 .abs-reasons { display: flex; flex-direction: column; gap: 10px; }
@@ -2069,6 +2285,43 @@ a.sp-pruef-pill:hover { filter: brightness(1.2); }
 
 /* ── Profil – Verbindungsstatus ──────────────────────────────────────────── */
 .profil-main { min-width: 0; }
+
+/* ── Sprachauswahl im Profil ─────────────────────────────────────────────── */
+.lang-switch-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.lang-radio-label {
+  cursor: pointer;
+}
+.lang-radio-label input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.lang-radio-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text-dim);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color var(--transition), background var(--transition), color var(--transition);
+}
+.lang-radio-label:hover .lang-radio-btn { border-color: var(--accent); color: var(--text); }
+.lang-radio-btn--active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
 .creds-status {
   display: flex;
   align-items: center;

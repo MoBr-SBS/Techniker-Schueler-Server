@@ -215,6 +215,20 @@ def save_branding():
     return redirect(url_for("admin.einstellungen") + "#branding")
 
 
+@bp.route("/admin/einstellungen/sprache", methods=["POST"])
+def save_default_language():
+    guard = _require_admin()
+    if guard:
+        return guard
+    lang = request.form.get("default_language", "de")
+    if lang not in ("de", "en"):
+        lang = "de"
+    queries.set_app_setting("default_language", lang)
+    from core.i18n import t as _t
+    flash(_t("admin.default_lang_saved", session.get("lang", "de")), "success")
+    return redirect(url_for("admin.einstellungen") + "#sprache")
+
+
 @bp.route("/admin/einstellungen/darstellung", methods=["POST"])
 def save_darstellung():
     guard = _require_admin()

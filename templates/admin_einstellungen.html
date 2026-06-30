@@ -104,6 +104,33 @@
       </div>
     </div>
 
+    <!-- ── Sprache ──────────────────────────────────────────── -->
+    <div class="section-label" id="sprache">{{ t('admin.default_lang') }}</div>
+    <div class="widget" style="margin-bottom:16px">
+      <div class="widget-body">
+        <form method="POST" action="/admin/einstellungen/sprache" class="vform">
+          <label>{{ t('admin.default_lang') }}
+            <div style="display:flex;gap:16px;margin-top:6px">
+              <label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer">
+                <input type="radio" name="default_language" value="de"
+                       {% if s.get('default_language','de') != 'en' %}checked{% endif %}>
+                🇩🇪 {{ t('admin.lang_de') }}
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer">
+                <input type="radio" name="default_language" value="en"
+                       {% if s.get('default_language') == 'en' %}checked{% endif %}>
+                🇬🇧 {{ t('admin.lang_en') }}
+              </label>
+            </div>
+            <span class="form-hint">{{ t('admin.default_lang_hint') }}</span>
+          </label>
+          <button type="submit" class="btn btn-primary">
+            <i data-lucide="save"></i> {{ t('admin.default_lang_save') }}
+          </button>
+        </form>
+      </div>
+    </div>
+
     <!-- ── Funktionen ────────────────────────────────────────── -->
     <div class="section-label" id="funktionen">Funktionen</div>
     <div class="widget" style="margin-bottom:16px">
@@ -226,6 +253,7 @@
       <div class="widget-body" style="font-size:0.82rem;color:var(--text-muted);line-height:1.7">
         <a href="#branding" style="display:block;color:var(--accent)">→ Branding</a>
         <a href="#darstellung" style="display:block;color:var(--accent)">→ Darstellung</a>
+        <a href="#sprache" style="display:block;color:var(--accent)">→ {{ t('admin.default_lang') }}</a>
         <a href="#funktionen" style="display:block;color:var(--accent)">→ Funktionen</a>
         <a href="#webuntis" style="display:block;color:var(--accent)">→ WebUntis</a>
       </div>

@@ -1,16 +1,16 @@
 {% if not configured %}
 <div class="empty-state">
   <i data-lucide="calendar-x"></i>
-  <p>WebUntis-Zugangsdaten noch nicht eingerichtet.</p>
+  <p>{{ t('sp.not_setup') }}</p>
   <a href="/profil" class="btn btn-primary" style="margin-top:8px">
-    <i data-lucide="settings"></i> Jetzt einrichten
+    <i data-lucide="settings"></i> {{ t('common.setup_now') }}
   </a>
 </div>
 
 {% elif fetch_error %}
 <div class="alert alert-error" style="margin-bottom:16px">
-  <strong>Stundenplan konnte nicht geladen werden:</strong> {{ fetch_error }}
-  &nbsp;–&nbsp;<a href="/profil" style="color:inherit;text-decoration:underline">Zugangsdaten prüfen</a>
+  <strong>{{ t('sp.load_error') }}</strong> {{ fetch_error }}
+  &nbsp;–&nbsp;<a href="/profil" style="color:inherit;text-decoration:underline">{{ t('common.check_creds') }}</a>
 </div>
 
 {% else %}
@@ -21,29 +21,29 @@
 
 <div class="sp-topbar">
   <div class="sp-week-nav">
-    <a href="/mein-stundenplan?woche={{ prev_monday.isoformat() }}" class="btn btn-sm sp-nav-arrow" title="Vorherige Woche">
+    <a href="/mein-stundenplan?woche={{ prev_monday.isoformat() }}" class="btn btn-sm sp-nav-arrow" title="{{ t('sp.prev_week') }}">
       <i data-lucide="chevron-left"></i>
     </a>
     <span class="sp-week-label mono">
       KW {{ monday.strftime('%V') }} &nbsp;·&nbsp;
       {{ monday.strftime('%d.%m.') }} – {{ (monday + timedelta(4)).strftime('%d.%m.%Y') }}
     </span>
-    <a href="/mein-stundenplan?woche={{ next_monday.isoformat() }}" class="btn btn-sm sp-nav-arrow" title="Nächste Woche">
+    <a href="/mein-stundenplan?woche={{ next_monday.isoformat() }}" class="btn btn-sm sp-nav-arrow" title="{{ t('sp.next_week') }}">
       <i data-lucide="chevron-right"></i>
     </a>
   </div>
   <span class="sp-source">
-    <i data-lucide="zap"></i> Quelle: WebUntis
+    <i data-lucide="zap"></i> {{ t('sp.source') }}
   </span>
   <button id="sp-edit-toggle" type="button" class="btn btn-sm"
-          title="Ex-Einträge hinzufügen"
+          title="{{ t('sp.add_ex') }}"
           style="background:var(--surface2);color:var(--text-dim)">
-    <i data-lucide="clipboard-plus"></i> Ex
+    <i data-lucide="clipboard-plus"></i> {{ t('sp.add_ex') }}
   </button>
   <form method="POST" action="/mein-stundenplan/aktualisieren">
     <input type="hidden" name="woche" value="{{ monday.isoformat() }}">
     <button type="submit" class="btn btn-sm" style="background:var(--surface2);color:var(--text-dim)">
-      <i data-lucide="refresh-cw"></i> Aktualisieren
+      <i data-lucide="refresh-cw"></i> {{ t('common.refresh') }}
     </button>
   </form>
 </div>
@@ -64,7 +64,7 @@
                      fach=exam.fach, name=exam.name, art=exam.art,
                      datum_str=exam.datum_str) }}"
              class="sp-exam-badge sp-exam-badge--{{ exam.art | lower | replace('schulaufgabe','sa') }}{% if exam.source == 'manual' %} sp-exam-badge--manual{% endif %}"
-             title="{{ exam.fach }} – {{ exam.art }}{% if exam.has_note %} · Notiz vorhanden{% endif %}">
+             title="{{ exam.fach }} – {{ exam.art }}{% if exam.has_note %} · {{ t('sp.note_exists') }}{% endif %}">
             <i data-lucide="{% if exam.has_note %}book-open{% else %}clipboard-pen{% endif %}"></i>
             <span>{{ exam.fach }}</span>
           </a>
@@ -103,7 +103,7 @@
           {% if manual_pruefung or wu_pruefung %}sp-cell--pruefung{% endif %}
           {% if manual_pruefung %}sp-cell--pruefung-ex
           {% elif wu_pruefung %}sp-cell--pruefung-{{ wu_pruefung.art | lower | replace('schulaufgabe','sa') }}{% endif %}"
-          {% if absence %}title="Abwesend ({{ 'entschuldigt' if absence.is_excused else 'unentschuldigt' }}): {{ absence.reason }} · {{ absence.start_time }}–{{ absence.end_time }}"{% endif %}>
+          {% if absence %}title="{{ t('sp.abwesend') }} ({{ t('sp.absent_excused') if absence.is_excused else t('sp.absent_unexcused') }}): {{ absence.reason }} · {{ absence.start_time }}–{{ absence.end_time }}"{% endif %}>
 
           {% if absence %}
           <span class="sp-absent-icon sp-absent-icon--{{ 'excused' if absence.is_excused else 'unexcused' }}">
@@ -114,7 +114,7 @@
           {% if slot %}
             {% if slot.cancelled %}
             <div class="sp-fach sp-fach--cancelled">{{ slot.fach }}</div>
-            <div class="sp-sub sp-cancelled-badge">Entfällt</div>
+            <div class="sp-sub sp-cancelled-badge">{{ t('sp.cancelled') }}</div>
             {% else %}
             <div class="sp-fach">{{ slot.fach }}</div>
             {% if slot.raum %}<div class="sp-sub">{{ slot.raum }}</div>{% endif %}
@@ -126,7 +126,7 @@
                        fach=wu_pruefung.fach, name=wu_pruefung.name, art=wu_pruefung.art,
                        datum_str=wu_pruefung.datum_str) }}"
                class="sp-pruef-pill sp-pruef-pill--{{ wu_pruefung.art | lower | replace('schulaufgabe','sa') }}"
-               title="{% if wu_pruefung.has_note %}Notiz ansehen{% else %}Notiz anlegen{% endif %}">
+               title="{% if wu_pruefung.has_note %}{{ t('sp.note_exists') }}{% else %}{{ t('pruef.notiz_add') }}{% endif %}">
               <i data-lucide="{% if wu_pruefung.has_note %}book-open{% else %}file-plus{% endif %}"></i>
               {{ wu_pruefung.art | replace('Schulaufgabe', 'SA') }}
             </a>
@@ -136,13 +136,13 @@
             {% if manual_pruefung %}
             <div class="sp-ex-row">
               <span class="sp-pruef-pill sp-pruef-pill--ex sp-pruef-pill--manual"
-                    title="{{ manual_pruefung.notiz if manual_pruefung.notiz else 'Manuell eingetragen' }}">
+                    title="{{ manual_pruefung.notiz if manual_pruefung.notiz else t('common.manual') }}">
                 <i data-lucide="pencil"></i> Ex
               </span>
               <form method="POST" action="/pruefungen/manuell/{{ manual_pruefung.id }}/loeschen"
-                    onsubmit="return confirm('Ex-Eintrag löschen?')">
+                    onsubmit="return confirm('{{ t('sp.delete_ex_confirm') }}')">
                 <input type="hidden" name="_return" value="/mein-stundenplan?woche={{ monday.isoformat() }}">
-                <button type="submit" class="sp-ex-del" title="Löschen">
+                <button type="submit" class="sp-ex-del" title="{{ t('common.delete') }}">
                   <i data-lucide="x"></i>
                 </button>
               </form>
@@ -151,7 +151,7 @@
             {# ── + Button (nur im Edit-Modus sichtbar, nur für zukünftige Termine) ── #}
             {% if slot_datum >= today %}
             {% set cell_id = 'exf-' + p.stunde | string + '-' + d | string %}
-            <button class="sp-ex-btn" data-form="{{ cell_id }}" type="button" title="Ex eintragen">
+            <button class="sp-ex-btn" data-form="{{ cell_id }}" type="button" title="{{ t('sp.add_ex') }}">
               <i data-lucide="plus"></i>
             </button>
             <div class="sp-ex-form" id="{{ cell_id }}">
@@ -160,7 +160,7 @@
                 <input type="hidden" name="datum"   value="{{ slot_datum.isoformat() }}">
                 <input type="hidden" name="_return" value="/mein-stundenplan?woche={{ monday.isoformat() }}">
                 <input class="sp-ex-notiz" type="text" name="notiz"
-                       placeholder="Notiz (optional)" autocomplete="off">
+                       placeholder="{{ t('sp.note_hint') }}" autocomplete="off">
                 <div class="sp-ex-actions">
                   <button type="submit" class="btn btn-sm btn-primary">
                     <i data-lucide="check"></i>
@@ -183,7 +183,7 @@
       </tr>
       {% if p.pause_nach > 0 %}
       <tr class="sp-pause-row">
-        <td class="sp-pause-cell" colspan="6">{{ p.pause_nach }} Min Pause</td>
+        <td class="sp-pause-cell" colspan="6">{{ p.pause_nach }} {{ t('sp.pause') }}</td>
       </tr>
       {% endif %}
       {% endfor %}

@@ -1,20 +1,60 @@
 {% extends "base.html" %}
-{% block title %}Profil{% endblock %}
-{% block page_title %}Mein Profil{% endblock %}
+{% block title %}{{ t('profil.page_title') }}{% endblock %}
+{% block page_title %}{{ t('profil.page_title') }}{% endblock %}
 
 {% block content %}
 <div class="page-cols">
 
   <div class="profil-main">
 
-    <!-- WebUntis-Zugangsdaten -->
-    <div class="section-label">WebUntis-Zugangsdaten</div>
+    <!-- ── Sprache ───────────────────────────────────────────────────────── -->
+    <div class="section-label">{{ t('profil.lang_section') }}</div>
+    <div class="widget" style="margin-bottom:16px">
+      <div class="widget-header">
+        <i data-lucide="languages"></i>
+        <span>{{ t('profil.lang_label') }}</span>
+      </div>
+      <div class="widget-body">
+        <form method="POST" action="/profil/sprache" class="lang-switch-form" id="lang-form">
+          <label class="lang-radio-label">
+            <input type="radio" name="language" value="de"
+                   {% if lang != 'en' %}checked{% endif %}
+                   onchange="langHighlight(this)">
+            <span class="lang-radio-btn {% if lang != 'en' %}lang-radio-btn--active{% endif %}">
+              🇩🇪 {{ t('profil.lang_de') }}
+            </span>
+          </label>
+          <label class="lang-radio-label">
+            <input type="radio" name="language" value="en"
+                   {% if lang == 'en' %}checked{% endif %}
+                   onchange="langHighlight(this)">
+            <span class="lang-radio-btn {% if lang == 'en' %}lang-radio-btn--active{% endif %}">
+              🇬🇧 {{ t('profil.lang_en') }}
+            </span>
+          </label>
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i data-lucide="save"></i> {{ t('profil.lang_save') }}
+          </button>
+        </form>
+        <script>
+        function langHighlight(radio) {
+          document.querySelectorAll('#lang-form .lang-radio-btn').forEach(function(btn) {
+            btn.classList.remove('lang-radio-btn--active');
+          });
+          radio.nextElementSibling.classList.add('lang-radio-btn--active');
+        }
+        </script>
+      </div>
+    </div>
+
+    <!-- ── WebUntis ──────────────────────────────────────────────────────── -->
+    <div class="section-label">{{ t('profil.wu_section') }}</div>
 
     {% if not wu_server or not wu_school %}
     <div class="alert alert-info" style="margin-bottom:16px">
       <i data-lucide="info"></i>
-      WebUntis wurde noch nicht vom Administrator konfiguriert.
-      {% if is_admin %}<a href="/admin/einstellungen" style="color:inherit;text-decoration:underline;margin-left:4px">Jetzt einrichten →</a>{% endif %}
+      {{ t('profil.wu_not_configured') }}
+      {% if is_admin %}<a href="/admin/einstellungen" style="color:inherit;text-decoration:underline;margin-left:4px">{{ t('profil.wu_setup_link') }}</a>{% endif %}
     </div>
     {% else %}
 
@@ -28,17 +68,17 @@
         </div>
         {% if creds %}
         <div class="creds-status">
-          <span class="creds-ok"><i data-lucide="check-circle"></i> Verbunden</span>
+          <span class="creds-ok"><i data-lucide="check-circle"></i> {{ t('profil.wu_connected') }}</span>
           <span class="text-muted mono" style="font-size:0.75rem">{{ creds.wt_username }}</span>
         </div>
         <p style="font-size:0.8rem;color:var(--text-muted);margin-top:8px">
-          Zugangsdaten gespeichert am {{ creds.gespeichert_am[:10] }}.
-          <a href="/mein-stundenplan" style="color:var(--accent)">Zum Stundenplan →</a>
+          {{ t('profil.wu_saved_on') }} {{ creds.gespeichert_am[:10] }}.
+          <a href="/mein-stundenplan" style="color:var(--accent)">{{ t('profil.wu_to_timetable') }}</a>
         </p>
         <form method="POST" action="/profil/webuntis/loeschen" style="margin-top:12px">
           <button type="submit" class="btn btn-danger btn-sm"
-            onclick="return confirm('WebUntis-Zugangsdaten wirklich löschen?')">
-            <i data-lucide="trash-2"></i> Zugangsdaten löschen
+            onclick="return confirm('{{ t('profil.wu_delete_confirm') }}')">
+            <i data-lucide="trash-2"></i> {{ t('profil.wu_delete') }}
           </button>
         </form>
         {% endif %}
@@ -49,13 +89,13 @@
     <div class="warning-box">
       <div class="warning-box-head">
         <i data-lucide="shield-alert"></i>
-        <strong>Sicherheitshinweis – bitte lesen</strong>
+        <strong>{{ t('profil.wu_security_head') }}</strong>
       </div>
       <ul class="warning-list">
-        <li>Deine WebUntis-Zugangsdaten werden <strong>verschlüsselt</strong> auf diesem Server gespeichert.</li>
-        <li>Der Administrator dieses Servers hat technisch die Möglichkeit, gespeicherte Daten einzusehen. Speichere deine Daten nur, wenn du dem Administrator <strong>vertraust</strong>.</li>
-        <li>Ändere dein WebUntis-Passwort, musst du es auch <strong>hier aktualisieren</strong>.</li>
-        <li>Dieser Server ist nur für den Einsatz im <strong>internen Schulnetz</strong> gedacht.</li>
+        <li>{{ t('profil.wu_security_1') | safe }}</li>
+        <li>{{ t('profil.wu_security_2') | safe }}</li>
+        <li>{{ t('profil.wu_security_3') | safe }}</li>
+        <li>{{ t('profil.wu_security_4') | safe }}</li>
       </ul>
     </div>
 
@@ -63,26 +103,26 @@
     <div class="widget" style="margin-top:16px">
       <div class="widget-header">
         <i data-lucide="{% if creds %}edit{% else %}plus-circle{% endif %}"></i>
-        <span>{% if creds %}Zugangsdaten aktualisieren{% else %}Zugangsdaten einrichten{% endif %}</span>
+        <span>{% if creds %}{{ t('profil.wu_update') }}{% else %}{{ t('profil.wu_setup') }}{% endif %}</span>
       </div>
       <div class="widget-body">
         <form method="POST" action="/profil/webuntis/speichern" class="vform">
-          <label>WebUntis-Benutzername
+          <label>{{ t('profil.wu_username') }}
             <input type="text" name="wt_username"
               value="{{ creds.wt_username if creds else '' }}"
               autocomplete="off" required>
           </label>
-          <label>WebUntis-Passwort
+          <label>{{ t('profil.wu_password') }}
             <input type="password" name="wt_password"
-              placeholder="{% if creds %}Leer lassen = unverändert{% else %}Passwort{% endif %}"
+              placeholder="{% if creds %}{{ t('profil.wu_pw_placeholder') }}{% else %}{{ t('profil.wu_password') }}{% endif %}"
               autocomplete="new-password" {% if not creds %}required{% endif %}>
           </label>
           <label class="checkbox-label">
             <input type="checkbox" name="hinweis_bestaetigt" required>
-            <span>Ich habe den Sicherheitshinweis gelesen und verstanden.</span>
+            <span>{{ t('profil.wu_checkbox') }}</span>
           </label>
           <button type="submit" class="btn btn-primary">
-            {% if creds %}Aktualisieren &amp; Verbindung testen{% else %}Speichern &amp; Verbindung testen{% endif %}
+            {% if creds %}{{ t('profil.wu_update_test') }}{% else %}{{ t('profil.wu_save_test') }}{% endif %}
           </button>
         </form>
       </div>
@@ -92,24 +132,24 @@
 
   </div>
 
-  <!-- Passwort ändern -->
+  <!-- ── Passwort ändern ───────────────────────────────────────────────── -->
   <div class="widget sidebar-form">
     <div class="widget-header">
       <i data-lucide="lock"></i>
-      <span>Server-Passwort ändern</span>
+      <span>{{ t('profil.pw_section') }}</span>
     </div>
     <div class="widget-body">
       <form method="POST" action="/profil/passwort" class="vform">
-        <label>Aktuelles Passwort
+        <label>{{ t('profil.pw_current') }}
           <input type="password" name="current_password" autocomplete="current-password" required>
         </label>
-        <label>Neues Passwort <span class="form-hint">(min. 6 Zeichen)</span>
+        <label>{{ t('profil.pw_new') }} <span class="form-hint">({{ t('profil.pw_new_hint') }})</span>
           <input type="password" name="new_password" autocomplete="new-password" required minlength="6">
         </label>
-        <label>Neues Passwort bestätigen
+        <label>{{ t('profil.pw_confirm') }}
           <input type="password" name="new_password2" autocomplete="new-password" required minlength="6">
         </label>
-        <button type="submit" class="btn btn-primary">Passwort speichern</button>
+        <button type="submit" class="btn btn-primary">{{ t('profil.pw_save') }}</button>
       </form>
     </div>
   </div>

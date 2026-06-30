@@ -1,12 +1,12 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="{{ lang }}">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>{{ server_name }} – Registrieren</title>
+  <title>{{ server_name }} – {{ t('auth.register_heading') }}</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="/static/js/lucide.min.js"></script>
   <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
   {% if favicon_url %}<link rel="icon" href="{{ favicon_url }}">{% endif %}
 </head>
@@ -24,8 +24,8 @@
     </div>
 
     <div>
-      <h1 class="login-heading">Registrieren</h1>
-      <p class="login-sub">Erstelle dein Konto.</p>
+      <h1 class="login-heading">{{ t('auth.register_heading') }}</h1>
+      <p class="login-sub">{{ t('auth.register_sub') }}</p>
     </div>
 
     {% if error %}
@@ -33,24 +33,24 @@
     {% endif %}
 
     <form method="POST" action="/register" class="vform">
-      <label>Benutzername
+      <label>{{ t('auth.username') }}
         <input type="text" name="username" autocomplete="username" autofocus required>
       </label>
-      <label>Passwort
+      <label>{{ t('auth.password') }}
         <input type="password" name="password" autocomplete="new-password" required>
-        <span class="form-hint">Mindestens 6 Zeichen.</span>
+        <span class="form-hint">{{ t('auth.pw_hint') }}</span>
       </label>
-      <label>Passwort wiederholen
+      <label>{{ t('auth.pw_repeat') }}
         <input type="password" name="password2" autocomplete="new-password" required>
       </label>
       <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center">
-        Konto erstellen
+        {{ t('auth.register_btn') }}
       </button>
     </form>
 
     <p style="text-align:center;margin-top:16px;font-size:0.82rem;color:var(--text-muted)">
-      Bereits registriert?
-      <a href="/login" style="color:var(--accent)">Anmelden</a>
+      {{ t('auth.have_account') }}
+      <a href="/login" style="color:var(--accent)">{{ t('auth.login_link') }}</a>
     </p>
 
   </div>

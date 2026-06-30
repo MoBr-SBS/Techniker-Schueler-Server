@@ -11,6 +11,7 @@ NAV_ITEMS = [
     {"id": "pruefungen",      "label": "Prüfungen",        "icon": "clipboard-list",  "url": "/pruefungen"},
     {"id": "abwesenheit",     "label": "Abwesenheit",      "icon": "user-x",          "url": "/abwesenheit"},
     {"id": "noten",            "label": "Noten",            "icon": "award",          "url": "/noten"},
+    {"id": "knowledgebase",    "label": "Knowledgebase",    "icon": "book-open",       "url": "/knowledgebase",  "bottom": True},
     {"id": "benutzer",         "label": "Benutzer",         "icon": "users",          "url": "/admin/benutzer",      "admin_only": True},
     {"id": "einstellungen",    "label": "Server-Config",    "icon": "sliders",         "url": "/admin/einstellungen", "admin_only": True},
     {"id": "server_status",    "label": "Server-Status",    "icon": "activity",        "url": "/admin/server-status", "admin_only": True},

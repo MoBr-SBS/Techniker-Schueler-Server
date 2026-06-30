@@ -87,6 +87,7 @@ def login():
             session["user_id"]  = user["id"]
             session["username"] = user["username"]
             session["is_admin"] = bool(user["is_admin"])
+            session["lang"]     = user["language"] or None
             # Nutzerspezifischen Verschlüsselungs-Key aus Passwort ableiten
             salt   = queries.get_or_create_wt_salt(user["id"])
             wt_key = derive_key(password, salt)
@@ -97,6 +98,8 @@ def login():
                 args=(current_app._get_current_object(), user["id"], wt_key),
                 daemon=True,
             ).start()
+            if not user["is_admin"] and not queries.get_webuntis_credentials(user["id"]):
+                return redirect(url_for("auth.webuntis_setup"))
             return redirect(url_for("dashboard.index"))
         error = "Ungültiger Benutzername oder Passwort."
     server_name, logo_url, favicon_url = _branding()
@@ -170,3 +173,59 @@ def change_password():
             session["wt_key"] = new_key.decode()
             success = "Passwort erfolgreich geändert."
     return render_template("change_password.html", page_id=None, error=error, success=success)
+
+
+@bp.route("/login/webuntis", methods=["GET", "POST"])
+def webuntis_setup():
+    if "user_id" not in session:
+        return redirect(url_for("auth.login"))
+    if session.get("is_admin") or queries.get_webuntis_credentials(session["user_id"]):
+        return redirect(url_for("dashboard.index"))
+
+    from core.webuntis_client import fetch_timetable, WebUntisError
+    from core.encryption import encrypt_with_key
+
+    error = None
+    if request.method == "POST":
+        wt_user = request.form.get("wt_username", "").strip()
+        wt_pass = request.form.get("wt_password", "")
+        confirmed = request.form.get("hinweis_bestaetigt")
+
+        server, school = queries.get_webuntis_config()
+        if not server or not school:
+            error = "WebUntis ist noch nicht vom Administrator konfiguriert. Bitte wende dich an den Administrator."
+        elif not confirmed:
+            error = "Bitte bestätige den Sicherheitshinweis."
+        elif not wt_user or not wt_pass:
+            error = "Bitte fülle alle Felder aus."
+        else:
+            try:
+                grid, _, _, klasse_id, klasse_name = fetch_timetable(server, school, wt_user, wt_pass)
+                wt_key = session.get("wt_key", "").encode()
+                queries.save_webuntis_credentials(
+                    session["user_id"], wt_user,
+                    encrypt_with_key(wt_pass, wt_key),
+                    uses_user_key=True,
+                )
+                if klasse_id:
+                    queries.update_user_klasse(session["user_id"], klasse_id, klasse_name)
+                    if grid:
+                        faecher = {
+                            slot["fach_kurz"]
+                            for slots in grid.values()
+                            for slot in slots.values()
+                            if slot and slot.get("fach_kurz")
+                        }
+                        queries.set_klasse_faecher(klasse_id, faecher)
+                return redirect(url_for("dashboard.index"))
+            except WebUntisError as e:
+                error = f"Verbindung fehlgeschlagen: {e}"
+
+    server_name, logo_url, favicon_url = _branding()
+    return render_template(
+        "webuntis_setup.html",
+        server_name=server_name,
+        logo_url=logo_url,
+        favicon_url=favicon_url,
+        error=error,
+    )

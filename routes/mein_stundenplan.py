@@ -5,10 +5,10 @@ from core import queries
 from core.encryption import decrypt_with_key
 from core.webuntis_client import get_timetable_cached, get_exams_cached, get_absences_cached, invalidate_cache, invalidate_exam_cache
 from core.nav import NAV_ITEMS
+from core.i18n import weekdays_long
+from core import queries as _q
 
 bp = Blueprint("mein_stundenplan", __name__)
-
-WOCHENTAGE = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag"]
 
 
 def _parse_monday(woche_str: str | None) -> datetime.date:
@@ -43,11 +43,13 @@ def index():
     wu_user = creds["wt_username"]
     wu_pass = decrypt_with_key(creds["wt_password"], session.get("wt_key", "").encode())
 
-    grid, monday, periods_info, warning = get_timetable_cached(
+    grid, fetched_monday, periods_info, warning = get_timetable_cached(
         session["user_id"],
         server, school, wu_user, wu_pass,
         monday,
     )
+    if fetched_monday is not None:
+        monday = fetched_monday
 
     week_end  = monday + datetime.timedelta(days=4)
     day_exams = {i: [] for i in range(5)}
@@ -141,7 +143,7 @@ def index():
         exam_cells=exam_cells,
         manual_exam_cells=manual_exam_cells,
         absence_cells=absence_cells,
-        wochentage=WOCHENTAGE,
+        wochentage=weekdays_long(session.get("lang") or _q.get_app_setting("default_language", "de") or "de"),
         monday=monday,
         prev_monday=prev_monday,
         next_monday=next_monday,

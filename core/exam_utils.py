@@ -8,9 +8,13 @@ from flask import session
 from core import queries
 from core.encryption import decrypt_with_key
 from core.webuntis_client import get_exams_cached
+from core.i18n import weekday_short
 
-_WOCHENTAGE = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
 _RANGE_FUTURE = 180
+
+
+def _lang() -> str:
+    return session.get("lang") or queries.get_app_setting("default_language", "de") or "de"
 
 
 def _schuljahr_beginn(today: datetime.date) -> datetime.date:
@@ -46,7 +50,7 @@ def load_webuntis_exams(user_id, today):
         days = (exam["datum"] - today).days
         e = dict(exam)
         e["days"] = days
-        e["wochentag"] = _WOCHENTAGE[exam["datum"].weekday()]
+        e["wochentag"] = weekday_short(exam["datum"].weekday(), _lang())
         e["heute"] = exam["datum"] == today
         e["exam_key"] = queries.make_exam_key(exam["fach"], exam["datum"])
         e["has_note"] = e["exam_key"] in noted_keys
@@ -76,7 +80,7 @@ def load_manual_exams(today, user_id=None):
             "datum": datum,
             "notiz": row["notiz"] or "",
             "days": days,
-            "wochentag": _WOCHENTAGE[datum.weekday()],
+            "wochentag": weekday_short(datum.weekday(), _lang()),
             "heute": datum == today,
             "exam_key": exam_key,
             "has_note": exam_key in noted_keys,

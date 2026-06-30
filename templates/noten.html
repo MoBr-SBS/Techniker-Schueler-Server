@@ -1,33 +1,58 @@
 {% extends "base.html" %}
-{% block title %}Noten{% endblock %}
-{% block page_title %}Noten{% endblock %}
+{% block title %}{{ t('noten.page_title') }}{% endblock %}
+{% block page_title %}{{ t('noten.page_title') }}{% endblock %}
 
 {% block content %}
 
 {# ── Gesamtschnitt ───────────────────────────────────────────────────────────── #}
 {% if gesamt_schnitt %}
 {% set gc = 'green' if gesamt_schnitt <= 2.0 else ('blue' if gesamt_schnitt <= 3.0 else ('orange' if gesamt_schnitt <= 4.0 else 'red')) %}
+{% set total_notes = summaries | sum(attribute='count') %}
 <div class="gesamt-schnitt-bar accent-{{ gc }}">
-  <span class="gs-label">Gesamtdurchschnitt</span>
-  <span class="gs-value">Ø {{ "%.2f"|format(gesamt_schnitt) }}</span>
-  <span class="gs-count">aus {{ summaries | sum(attribute='count') }} Note{% if summaries | sum(attribute='count') != 1 %}n{% endif %} in {{ summaries | length }} {% if summaries | length != 1 %}Fächern{% else %}Fach{% endif %}</span>
+  <div class="gs-left">
+    <span class="gs-label">{{ t('noten.gesamt') }}</span>
+    <span class="gs-value">Ø {{ "%.2f"|format(gesamt_schnitt) }}</span>
+    <span class="gs-count">
+      {{ t('noten.aus') }} {{ total_notes }} {{ t('noten.note_singular') if total_notes == 1 else t('noten.note_plural') }}
+      {{ t('noten.in') }} {{ summaries | length }} {{ t('noten.fach_singular') if summaries | length == 1 else t('noten.fach_plural') }}
+    </span>
+  </div>
+  <div class="gs-gauge-wrap">
+    <div class="gs-gauge-track">
+      <div class="gs-gauge-fill gs-gauge-fill--{{ gc }}"
+           style="width: {{ [[(gesamt_schnitt - 1) / 5 * 100, 2] | max, 100] | min }}%"></div>
+      <div class="gs-gauge-marker" style="left: {{ [[(gesamt_schnitt - 1) / 5 * 100, 2] | max, 100] | min }}%"></div>
+    </div>
+    <div class="gs-gauge-labels">
+      <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span>
+    </div>
+  </div>
 </div>
 {% endif %}
 
 {# ── Fachübersicht ───────────────────────────────────────────────────────────── #}
 {% if summaries %}
-<div class="section-label {% if gesamt_schnitt %}mt-20{% endif %}">Fachübersicht</div>
+<div class="section-label {% if gesamt_schnitt %}mt-20{% endif %}">{{ t('noten.fachuebersicht') }}</div>
 <div class="noten-summary-grid">
   {% for s in summaries %}
-  <div class="noten-summary-card accent-{{ s.color }}">
-    <div class="ns-fach">{{ s.fach }}</div>
+  {% set pct = [[(s.schnitt - 1) / 5 * 100, 2] | max, 100] | min %}
+  <div class="noten-summary-card accent-{{ s.color }}"
+       onclick="simOpen('{{ s.fach|e }}', {{ s.schnitt }}, {{ s.avg_sa if s.avg_sa is not none else 'null' }}, {{ s.avg_ex if s.avg_ex is not none else 'null' }}, {{ s.sa_count }}, {{ s.ex_count }})"
+       title="Simulator öffnen">
+    <div class="ns-top-row">
+      <div class="ns-fach">{{ s.fach }}</div>
+      <div class="ns-sim-hint"><i data-lucide="flask-conical"></i></div>
+    </div>
     <div class="ns-schnitt">Ø {{ "%.2f"|format(s.schnitt) }}</div>
     <div class="ns-sub">
       {% if s.avg_sa is not none %}<span>SA&nbsp;{{ "%.2f"|format(s.avg_sa) }}</span>{% endif %}
       {% if s.avg_sa is not none and s.avg_ex is not none %}<span class="ns-sep">·</span>{% endif %}
       {% if s.avg_ex is not none %}<span>Ex&nbsp;{{ "%.2f"|format(s.avg_ex) }}</span>{% endif %}
     </div>
-    <div class="ns-count">{{ s.count }} Note{% if s.count != 1 %}n{% endif %}</div>
+    <div class="ns-bar-track">
+      <div class="ns-bar-fill ns-bar-fill--{{ s.color }}" style="width:{{ pct }}%"></div>
+    </div>
+    <div class="ns-count">{{ s.count }} {{ t('noten.note_singular') if s.count == 1 else t('noten.note_plural') }}</div>
   </div>
   {% endfor %}
 </div>
@@ -38,11 +63,11 @@
 <table class="noten-table">
   <thead>
     <tr>
-      <th>Datum</th>
-      <th>Art</th>
-      <th>Meine Note</th>
-      <th>Klassen-Ø</th>
-      <th>Beschreibung</th>
+      <th>{{ t('noten.datum') }}</th>
+      <th>{{ t('noten.art') }}</th>
+      <th>{{ t('noten.meine_note') }}</th>
+      <th>{{ t('noten.klassen_avg') }}</th>
+      <th>{{ t('noten.beschreibung') }}</th>
       <th></th>
     </tr>
   </thead>
@@ -68,7 +93,7 @@
       <td class="text-muted">{{ note.beschreibung or '–' }}</td>
       <td>
         <form method="POST" action="/noten/delete/{{ note.id }}" style="display:contents">
-          <button type="submit" class="icon-btn icon-btn--danger" title="Löschen">
+          <button type="submit" class="icon-btn icon-btn--danger" title="{{ t('common.delete') }}">
             <i data-lucide="trash-2"></i>
           </button>
         </form>
@@ -92,14 +117,14 @@
 {% if not pending_exams %}
 <div class="empty-state">
   <i data-lucide="award"></i>
-  <p>Noch keine Noten eingetragen.</p>
+  <p>{{ t('noten.leere_noten') }}</p>
 </div>
 {% endif %}
 {% endif %}
 
 {# ── Offene Prüfungsbewertungen ──────────────────────────────────────────────── #}
 {% if pending_exams %}
-<div class="section-label mt-20">Offene Bewertungen</div>
+<div class="section-label mt-20">{{ t('noten.offene_bew') }}</div>
 <div class="pending-exams-list">
   {% for exam in pending_exams %}
   <div class="pending-exam-item">
@@ -112,7 +137,7 @@
       {% if exam.source == 'webuntis' %}
       <span class="pruef-source-badge pruef-source-badge--untis"><i data-lucide="zap"></i> Untis</span>
       {% else %}
-      <span class="pruef-source-badge pruef-source-badge--manual"><i data-lucide="pencil"></i> Manuell</span>
+      <span class="pruef-source-badge pruef-source-badge--manual"><i data-lucide="pencil"></i> {{ t('common.manual') }}</span>
       {% endif %}
     </div>
     <form method="POST" action="/noten/add" class="pending-exam-form">
@@ -120,11 +145,11 @@
       <input type="hidden" name="datum"    value="{{ exam.datum.isoformat() }}">
       <input type="hidden" name="exam_key" value="{{ exam.exam_key }}">
       <input type="hidden" name="art"      value="{{ exam.art }}">
-      <input type="text" name="note" placeholder="Meine Note"
+      <input type="text" name="note" placeholder="{{ t('noten.meine_note') }}"
              required inputmode="decimal" class="pending-note-input"
              autocomplete="off">
       <button type="submit" class="btn btn-sm btn-primary">
-        <i data-lucide="check"></i> Eintragen
+        <i data-lucide="check"></i> {{ t('noten.eintragen') }}
       </button>
     </form>
   </div>
@@ -137,16 +162,16 @@
   <button type="button" class="btn btn-sm manual-entry-toggle" id="manual-toggle"
           onclick="toggleManualForm()">
     <i data-lucide="plus" id="manual-toggle-icon"></i>
-    Note manuell eintragen
+    {{ t('noten.manuell') }}
   </button>
   <div id="manual-form-section" style="display:none" class="manual-form-card">
     <form method="POST" action="/noten/add" class="manual-inline-form">
       <div class="manual-form-row">
         <div class="manual-form-field">
-          <label>Fach *</label>
+          <label>{{ t('noten.fach_label') }} *</label>
           {% if klasse_faecher %}
           <select name="fach" required>
-            <option value="">Fach wählen…</option>
+            <option value="">{{ t('noten.fach_waehlen') }}</option>
             {% for f in klasse_faecher %}
             <option value="{{ f }}">{{ f }}</option>
             {% endfor %}
@@ -156,34 +181,282 @@
           {% endif %}
         </div>
         <div class="manual-form-field manual-form-field--sm">
-          <label>Art *</label>
+          <label>{{ t('noten.art') }} *</label>
           <select name="art">
             <option value="Ex">Ex</option>
             <option value="SA">SA</option>
           </select>
         </div>
         <div class="manual-form-field manual-form-field--sm">
-          <label>Note *</label>
+          <label>{{ t('noten.note_label') }} *</label>
           <input type="text" name="note" placeholder="2,5" required inputmode="decimal">
         </div>
         <div class="manual-form-field manual-form-field--sm">
-          <label>Datum *</label>
+          <label>{{ t('noten.datum_label') }} *</label>
           <input type="date" name="datum" value="{{ today }}" required>
         </div>
         <div class="manual-form-field">
-          <label>Beschreibung</label>
+          <label>{{ t('noten.beschreibung') }}</label>
           <input type="text" name="beschreibung" placeholder="z. B. Mathearbeit">
         </div>
         <div class="manual-form-field manual-form-field--btn">
           <label>&nbsp;</label>
-          <button type="submit" class="btn btn-primary">Eintragen</button>
+          <button type="submit" class="btn btn-primary">{{ t('noten.eintragen') }}</button>
         </div>
       </div>
     </form>
   </div>
 </div>
 
+{# ── Simulator Modal ──────────────────────────────────────────────────────────── #}
+<div id="sim-overlay" class="sim-overlay" onclick="simClose(event)">
+  <div class="sim-modal" role="dialog" aria-modal="true">
+    <div class="sim-modal-header">
+      <div class="sim-modal-title">
+        <i data-lucide="flask-conical"></i>
+        <span id="sim-modal-fach">–</span>
+      </div>
+      <button class="sim-modal-close" onclick="simClose(null)" aria-label="Schließen">
+        <i data-lucide="x"></i>
+      </button>
+    </div>
+
+    {# Aktueller Stand #}
+    <div class="sim-current-block">
+      <div class="sim-stat">
+        <div class="sim-stat-label">{{ t('noten.sim_aktuell') }}</div>
+        <div class="sim-stat-value" id="sim-current-val">–</div>
+      </div>
+      <div class="sim-stat">
+        <div class="sim-stat-label">SA-Ø</div>
+        <div class="sim-stat-value sim-stat-value--sm" id="sim-current-sa">–</div>
+      </div>
+      <div class="sim-stat">
+        <div class="sim-stat-label">Ex-Ø</div>
+        <div class="sim-stat-value sim-stat-value--sm" id="sim-current-ex">–</div>
+      </div>
+    </div>
+
+    {# Gauge aktuell #}
+    <div class="sim-gauge-wrap">
+      <div class="sim-gauge-track" id="sim-gauge-track">
+        <div id="sim-gauge-base" class="sim-gauge-base"></div>
+        <div id="sim-gauge-proj" class="sim-gauge-proj"></div>
+        <div id="sim-gauge-marker-base" class="sim-gauge-marker sim-gauge-marker--base"></div>
+        <div id="sim-gauge-marker-proj" class="sim-gauge-marker sim-gauge-marker--proj" style="display:none"></div>
+      </div>
+      <div class="sim-gauge-labels"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span></div>
+    </div>
+
+    {# Hypothetische Noten eingeben #}
+    <div class="sim-input-section">
+      <div class="sim-input-label">{{ t('noten.sim_add') }}</div>
+      <div class="sim-input-row">
+        <select id="sim-modal-art" class="sim-select">
+          <option value="ex">Ex</option>
+          <option value="sa">SA</option>
+        </select>
+        <input type="text" id="sim-modal-note" class="sim-input" placeholder="z. B. 2,5" inputmode="decimal" autocomplete="off">
+        <button class="btn btn-sm btn-primary" onclick="simModalAdd()">
+          <i data-lucide="plus"></i> {{ t('noten.sim_add') }}
+        </button>
+      </div>
+      <div id="sim-modal-chips" class="sim-chips"></div>
+    </div>
+
+    {# Projektions-Ergebnis #}
+    <div id="sim-proj-block" class="sim-proj-block" style="display:none">
+      <div class="sim-proj-arrow"><i data-lucide="arrow-down"></i></div>
+      <div class="sim-proj-result">
+        <div class="sim-proj-inner">
+          <div class="sim-stat">
+            <div class="sim-stat-label">{{ t('noten.sim_proj') }}</div>
+            <div class="sim-stat-value" id="sim-proj-val">–</div>
+          </div>
+          <div class="sim-stat">
+            <div class="sim-stat-label">{{ t('noten.sim_sa_neu') }}</div>
+            <div class="sim-stat-value sim-stat-value--sm" id="sim-proj-sa">–</div>
+          </div>
+          <div class="sim-stat">
+            <div class="sim-stat-label">{{ t('noten.sim_ex_neu') }}</div>
+            <div class="sim-stat-value sim-stat-value--sm" id="sim-proj-ex">–</div>
+          </div>
+          <div class="sim-stat">
+            <div class="sim-stat-label">{{ t('noten.sim_delta') }}</div>
+            <div class="sim-stat-value sim-stat-value--sm" id="sim-delta-val">–</div>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-sm sim-reset-btn" onclick="simReset()">
+        <i data-lucide="rotate-ccw"></i> {{ t('noten.sim_reset') }}
+      </button>
+    </div>
+
+  </div>
+</div>
+
 <script>
+var simState = { fach:'', schnitt:0, avgSa:null, avgEx:null, saCount:0, exCount:0, notes:[] };
+
+var colorMap = { green:'var(--green)', blue:'var(--blue)', orange:'var(--orange)', red:'var(--red)' };
+var colorHex = { green:'#22c55e', blue:'#3b82f6', orange:'#f97316', red:'#ef4444' };
+
+function gradeColor(v) {
+  if (v <= 2.0) return 'green';
+  if (v <= 3.0) return 'blue';
+  if (v <= 4.0) return 'orange';
+  return 'red';
+}
+
+function weightedAvg(saSum, saCnt, exSum, exCnt) {
+  var hasSa = saCnt > 0, hasEx = exCnt > 0;
+  if (hasSa && hasEx) return (2 * (saSum / saCnt) + (exSum / exCnt)) / 3;
+  if (hasSa) return saSum / saCnt;
+  if (hasEx) return exSum / exCnt;
+  return null;
+}
+
+function simOpen(fach, schnitt, avgSa, avgEx, saCount, exCount) {
+  simState = { fach:fach, schnitt:schnitt, avgSa:avgSa, avgEx:avgEx, saCount:saCount, exCount:exCount, notes:[] };
+
+  document.getElementById('sim-modal-fach').textContent = fach;
+
+  var col = gradeColor(schnitt);
+  var cv = document.getElementById('sim-current-val');
+  cv.textContent = 'Ø ' + schnitt.toFixed(2);
+  cv.style.color = colorMap[col];
+
+  document.getElementById('sim-current-sa').textContent = avgSa != null ? 'Ø ' + avgSa.toFixed(2) : '–';
+  document.getElementById('sim-current-ex').textContent = avgEx != null ? 'Ø ' + avgEx.toFixed(2) : '–';
+
+  var pct = Math.min(Math.max((schnitt - 1) / 5 * 100, 1), 100);
+  document.getElementById('sim-gauge-base').style.width = pct + '%';
+  document.getElementById('sim-gauge-base').style.background = colorHex[col];
+  document.getElementById('sim-gauge-marker-base').style.left = pct + '%';
+  document.getElementById('sim-gauge-marker-base').style.borderColor = colorHex[col];
+  document.getElementById('sim-gauge-proj').style.width = '0%';
+  document.getElementById('sim-gauge-marker-proj').style.display = 'none';
+
+  document.getElementById('sim-modal-chips').innerHTML = '';
+  document.getElementById('sim-proj-block').style.display = 'none';
+  document.getElementById('sim-modal-note').value = '';
+  document.getElementById('sim-modal-note').style.borderColor = '';
+
+  document.getElementById('sim-overlay').classList.add('sim-overlay--open');
+  setTimeout(function() { document.getElementById('sim-modal-note').focus(); }, 150);
+  lucide.createIcons();
+}
+
+function simClose(e) {
+  if (e && e.target !== document.getElementById('sim-overlay')) return;
+  document.getElementById('sim-overlay').classList.remove('sim-overlay--open');
+}
+
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') document.getElementById('sim-overlay').classList.remove('sim-overlay--open');
+});
+
+function simModalAdd() {
+  var raw = document.getElementById('sim-modal-note').value.replace(',', '.');
+  var note = parseFloat(raw);
+  var inp = document.getElementById('sim-modal-note');
+  if (isNaN(note) || note < 1 || note > 6) {
+    inp.style.borderColor = colorHex['red'];
+    inp.focus();
+    return;
+  }
+  inp.style.borderColor = '';
+  var art = document.getElementById('sim-modal-art').value;
+  simState.notes.push({ note: note, art: art });
+  inp.value = '';
+  inp.focus();
+  simRenderChips();
+  simCalc();
+}
+
+document.getElementById('sim-modal-note').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') simModalAdd();
+});
+
+function simRemoveNote(i) {
+  simState.notes.splice(i, 1);
+  simRenderChips();
+  if (simState.notes.length === 0) {
+    document.getElementById('sim-proj-block').style.display = 'none';
+    document.getElementById('sim-gauge-proj').style.width = '0%';
+    document.getElementById('sim-gauge-marker-proj').style.display = 'none';
+  } else {
+    simCalc();
+  }
+}
+
+function simRenderChips() {
+  var el = document.getElementById('sim-modal-chips');
+  if (simState.notes.length === 0) { el.innerHTML = ''; return; }
+  el.innerHTML = simState.notes.map(function(n, i) {
+    var c = n.note <= 2 ? 'green' : n.note <= 3 ? 'blue' : n.note <= 4 ? 'orange' : 'red';
+    return '<span class="sim-note-chip sim-note-chip--' + c + '">' +
+      n.art.toUpperCase() + '&nbsp;' + n.note.toFixed(1) +
+      '<button onclick="simRemoveNote(' + i + ')"><i data-lucide="x"></i></button></span>';
+  }).join('');
+  lucide.createIcons();
+}
+
+function simCalc() {
+  var s = simState;
+  var saSum = s.avgSa != null ? s.avgSa * s.saCount : 0;
+  var saCnt = s.saCount;
+  var exSum = s.avgEx != null ? s.avgEx * s.exCount : 0;
+  var exCnt = s.exCount;
+
+  s.notes.forEach(function(n) {
+    if (n.art === 'sa') { saSum += n.note; saCnt++; }
+    else                { exSum += n.note; exCnt++; }
+  });
+
+  var newAvgSa = saCnt > 0 ? saSum / saCnt : null;
+  var newAvgEx = exCnt > 0 ? exSum / exCnt : null;
+  var projected = weightedAvg(saSum, saCnt, exSum, exCnt);
+  if (projected == null) return;
+
+  var col = gradeColor(projected);
+  var delta = projected - s.schnitt;
+
+  var pv = document.getElementById('sim-proj-val');
+  pv.textContent = 'Ø ' + projected.toFixed(2);
+  pv.style.color = colorHex[col];
+
+  document.getElementById('sim-proj-sa').textContent = newAvgSa != null ? 'Ø ' + newAvgSa.toFixed(2) : '–';
+  document.getElementById('sim-proj-ex').textContent = newAvgEx != null ? 'Ø ' + newAvgEx.toFixed(2) : '–';
+
+  var dEl = document.getElementById('sim-delta-val');
+  dEl.textContent = (delta >= 0 ? '+' : '') + delta.toFixed(2);
+  dEl.style.color = delta < -0.005 ? colorHex['green'] : (delta > 0.005 ? colorHex['red'] : colorHex['blue']);
+
+  var newPct = Math.min(Math.max((projected - 1) / 5 * 100, 1), 100);
+  var gp = document.getElementById('sim-gauge-proj');
+  gp.style.width = newPct + '%';
+  gp.style.background = colorHex[col];
+  var mp = document.getElementById('sim-gauge-marker-proj');
+  mp.style.display = 'block';
+  mp.style.left = newPct + '%';
+  mp.style.borderColor = colorHex[col];
+
+  document.getElementById('sim-proj-block').style.display = 'flex';
+  document.getElementById('sim-proj-block').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  lucide.createIcons();
+}
+
+function simReset() {
+  simState.notes = [];
+  document.getElementById('sim-modal-chips').innerHTML = '';
+  document.getElementById('sim-proj-block').style.display = 'none';
+  document.getElementById('sim-gauge-proj').style.width = '0%';
+  document.getElementById('sim-gauge-marker-proj').style.display = 'none';
+  document.getElementById('sim-modal-note').value = '';
+  document.getElementById('sim-modal-note').focus();
+}
+
 function toggleManualForm() {
   var section = document.getElementById('manual-form-section');
   var icon    = document.getElementById('manual-toggle-icon');
