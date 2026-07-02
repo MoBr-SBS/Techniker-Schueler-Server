@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ server_name }} – WebUntis einrichten</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+  {% if favicon_url %}<link rel="icon" href="{{ favicon_url }}">{% endif %}
+</head>
+<body class="login-body">
+
+  <div class="login-card">
+
+    <div class="login-logo">
+      {% if logo_url %}
+      <div class="logo-icon logo-icon--img"><img src="{{ logo_url }}" alt="Logo" class="logo-img"></div>
+      {% else %}
+      <div class="logo-icon"><i data-lucide="server"></i></div>
+      {% endif %}
+      <span class="logo-text">{{ server_name }}</span>
+    </div>
+
+    <div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <div style="display:flex;gap:6px;align-items:center">
+          <div style="width:24px;height:4px;border-radius:2px;background:var(--accent);opacity:.4"></div>
+          <div style="width:24px;height:4px;border-radius:2px;background:var(--accent)"></div>
+        </div>
+        <span style="font-size:0.75rem;color:var(--text-muted)">Schritt 2 von 2</span>
+      </div>
+      <h1 class="login-heading">WebUntis einrichten</h1>
+      <p class="login-sub">Verbinde deinen WebUntis-Account, um Stundenplan und Prüfungen zu laden.</p>
+    </div>
+
+    {% if error %}
+    <div class="alert alert-error">{{ error }}</div>
+    {% endif %}
+
+    <div style="background:var(--surface2);border-radius:8px;padding:12px 14px;font-size:0.8rem;color:var(--text-muted);line-height:1.6">
+      <strong style="color:var(--text);display:flex;align-items:center;gap:6px;margin-bottom:5px">
+        <i data-lucide="shield-alert" style="width:14px;height:14px;color:var(--orange)"></i>
+        Sicherheitshinweis
+      </strong>
+      Deine Zugangsdaten werden <strong>verschlüsselt</strong> auf diesem Server gespeichert.
+      Der Administrator hat technisch die Möglichkeit, gespeicherte Daten einzusehen –
+      speichere sie nur, wenn du ihm <strong>vertraust</strong>.
+    </div>
+
+    <form method="POST" action="/login/webuntis" class="vform">
+      <label>WebUntis-Benutzername
+        <input type="text" name="wt_username" autocomplete="off" autofocus required>
+      </label>
+      <label>WebUntis-Passwort
+        <input type="password" name="wt_password" autocomplete="new-password" required>
+      </label>
+      <label class="checkbox-label">
+        <input type="checkbox" name="hinweis_bestaetigt" required>
+        <span>Ich habe den Sicherheitshinweis gelesen und verstanden.</span>
+      </label>
+      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center">
+        <i data-lucide="arrow-right"></i> Weiter
+      </button>
+    </form>
+
+    <p style="text-align:center;margin-top:4px;font-size:0.82rem;color:var(--text-muted)">
+      <a href="/logout" style="color:var(--text-muted)">Abmelden</a>
+    </p>
+
+  </div>
+
+  <script>lucide.createIcons();</script>
+</body>
+</html>

@@ -1,0 +1,438 @@
+{% extends "base.html" %}
+{% block title %}Knowledgebase{% endblock %}
+{% block page_title %}Knowledgebase{% endblock %}
+
+{% block content %}
+<div class="kb-layout">
+
+  {# ── Sidebar ─────────────────────────────────────────────────────────────── #}
+  <aside class="kb-sidebar">
+
+    {% if is_admin %}
+    <div class="kb-sidebar-actions">
+      <a href="{{ url_for('knowledgebase.new_page') }}" class="btn btn-primary btn-sm" style="width:100%;justify-content:center">
+        <i data-lucide="plus"></i> Neue Seite
+      </a>
+    </div>
+    {% endif %}
+
+    <nav class="kb-nav">
+      <a href="{{ url_for('knowledgebase.index') }}"
+         class="kb-nav-home {% if view == 'list' and not current_page %}active{% endif %}">
+        <i data-lucide="book-open"></i> Übersicht
+      </a>
+
+      {% for group in grouped %}
+        {% if group.cat %}
+        <div class="kb-nav-category">
+          <div class="kb-nav-category-header">
+            <i data-lucide="{% if is_admin and not group.cat.visible %}folder-x{% else %}folder{% endif %}"></i>
+            <span>{{ group.cat.name }}</span>
+            {% if is_admin and not group.cat.visible %}
+            <span class="kb-hidden-badge" title="Nur für Admins sichtbar"><i data-lucide="eye-off"></i></span>
+            {% endif %}
+            {% if is_admin %}
+            <button class="kb-cat-edit-btn" title="Kategorie bearbeiten"
+                    onclick="openCatModal({{ group.cat.id }}, '{{ group.cat.name|e }}', {{ group.cat.sort_order }}, {{ group.cat.visible }})">
+              <i data-lucide="pencil"></i>
+            </button>
+            {% endif %}
+          </div>
+          {% for page in group.pages %}
+          <a href="{{ url_for('knowledgebase.view_page', page_id=page.id) }}"
+             class="kb-nav-item {% if current_page and current_page.id == page.id %}active{% endif %}">
+            {{ page.title }}
+            {% if is_admin and not page.visible %}
+            <span class="kb-hidden-badge" title="Nur für Admins sichtbar"><i data-lucide="eye-off"></i></span>
+            {% endif %}
+          </a>
+          {% endfor %}
+        </div>
+        {% else %}
+        {# ungrouped #}
+        {% for page in group.pages %}
+        <a href="{{ url_for('knowledgebase.view_page', page_id=page.id) }}"
+           class="kb-nav-item {% if current_page and current_page.id == page.id %}active{% endif %}">
+          {{ page.title }}
+          {% if is_admin and not page.visible %}
+          <span class="kb-hidden-badge" title="Nur für Admins sichtbar"><i data-lucide="eye-off"></i></span>
+          {% endif %}
+        </a>
+        {% endfor %}
+        {% endif %}
+      {% endfor %}
+
+      {% if not grouped or grouped | selectattr('pages') | list | length == 0 %}
+      <div style="color:var(--text-muted);font-size:0.82rem;padding:8px 12px">Noch keine Seiten vorhanden.</div>
+      {% endif %}
+    </nav>
+
+    {% if is_admin %}
+    <div class="kb-admin-section">
+      <div class="section-label" style="margin-bottom:8px">Kategorien</div>
+      <form method="POST" action="{{ url_for('knowledgebase.add_category') }}" class="kb-cat-form">
+        <input type="text" name="name" placeholder="Neue Kategorie…" required class="form-input kb-cat-input">
+        <button type="submit" class="btn btn-sm" style="background:var(--surface2);color:var(--text-dim)">
+          <i data-lucide="plus"></i>
+        </button>
+      </form>
+    </div>
+    {% endif %}
+
+  </aside>
+
+  {# ── Main ────────────────────────────────────────────────────────────────── #}
+  <div class="kb-main">
+
+    {# ── List View ── #}
+    {% if view == 'list' %}
+    <div class="kb-welcome">
+      <i data-lucide="book-open" style="width:48px;height:48px;color:var(--text-muted)"></i>
+      <h2 style="margin:12px 0 4px">Knowledgebase</h2>
+      <p style="color:var(--text-muted)">Wähle eine Seite aus dem Menü oder durchsuche die Übersicht.</p>
+    </div>
+
+    {% for group in grouped %}
+    {% if group.pages %}
+    <div class="kb-group">
+      <div class="section-label">
+        {% if group.cat %}<i data-lucide="folder"></i> {{ group.cat.name }}{% else %}Allgemein{% endif %}
+      </div>
+      <div class="kb-cards">
+        {% for page in group.pages %}
+        <a href="{{ url_for('knowledgebase.view_page', page_id=page.id) }}" class="kb-card">
+          <div class="kb-card-title">
+            {{ page.title }}
+            {% if is_admin and not page.visible %}
+            <span class="kb-hidden-badge"><i data-lucide="eye-off"></i> Versteckt</span>
+            {% endif %}
+          </div>
+          <div class="kb-card-meta">
+            <i data-lucide="clock"></i> {{ page.updated_at[:10] }}
+            {% if page.updated_by %}&nbsp;·&nbsp;<i data-lucide="user"></i> {{ page.updated_by }}{% endif %}
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+
+    {# ── Page View ── #}
+    {% elif view == 'page' %}
+    <div class="kb-page-header">
+      <h2 class="kb-page-title">
+        {{ current_page.title }}
+        {% if is_admin and not current_page.visible %}
+        <span class="kb-hidden-badge"><i data-lucide="eye-off"></i> Versteckt</span>
+        {% endif %}
+      </h2>
+      <div class="kb-page-meta">
+        <span><i data-lucide="clock"></i> {{ current_page.updated_at[:10] }}</span>
+        {% if current_page.updated_by %}<span><i data-lucide="user"></i> {{ current_page.updated_by }}</span>{% endif %}
+      </div>
+      {% if is_admin %}
+      <div class="kb-page-admin-bar">
+        <a href="{{ url_for('knowledgebase.edit_page', page_id=current_page.id) }}" class="btn btn-sm">
+          <i data-lucide="pencil"></i> Bearbeiten
+        </a>
+        <form method="POST" action="{{ url_for('knowledgebase.toggle_visibility', page_id=current_page.id) }}" style="display:inline">
+          <button type="submit" class="btn btn-sm" style="background:var(--surface2);color:var(--text-dim)">
+            {% if current_page.visible %}
+            <i data-lucide="eye-off"></i> Verstecken
+            {% else %}
+            <i data-lucide="eye"></i> Sichtbar machen
+            {% endif %}
+          </button>
+        </form>
+        <form method="POST" action="{{ url_for('knowledgebase.delete_page', page_id=current_page.id) }}"
+              style="display:inline" onsubmit="return confirm('Seite wirklich löschen?')">
+          <button type="submit" class="btn btn-danger btn-sm">
+            <i data-lucide="trash-2"></i> Löschen
+          </button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+    <div class="kb-content md-body">{{ html_content|safe }}</div>
+
+    {# ── Edit View ── #}
+    {% elif view == 'edit' %}
+    <div class="kb-edit-header">
+      <h2>{% if current_page %}Seite bearbeiten{% else %}Neue Seite{% endif %}</h2>
+    </div>
+    <form method="POST" action="{{ url_for('knowledgebase.save_page') }}" class="kb-edit-form">
+      {% if current_page %}
+      <input type="hidden" name="page_id" value="{{ current_page.id }}">
+      {% endif %}
+
+      <div class="kb-edit-row">
+        <div class="kb-edit-field" style="flex:3">
+          <label class="form-label">Titel</label>
+          <input type="text" name="title" class="form-input"
+                 value="{{ current_page.title if current_page else '' }}" required>
+        </div>
+        <div class="kb-edit-field">
+          <label class="form-label">Kategorie</label>
+          <select name="category_id" class="form-input">
+            <option value="">– Keine –</option>
+            {% for cat in categories %}
+            <option value="{{ cat.id }}"
+              {% if current_page and current_page.category_id == cat.id %}selected{% endif %}>
+              {{ cat.name }}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="kb-edit-field" style="flex:0 0 100px">
+          <label class="form-label">Reihenfolge</label>
+          <input type="number" name="sort_order" class="form-input"
+                 value="{{ current_page.sort_order if current_page else 0 }}">
+        </div>
+        <div class="kb-edit-field" style="flex:0 0 auto;justify-content:flex-end;padding-top:24px">
+          <label class="kb-toggle-label">
+            <input type="checkbox" name="visible" value="1"
+                   {% if not current_page or current_page.visible %}checked{% endif %}>
+            <span>Für alle sichtbar</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="kb-editor-area">
+        <div class="kb-editor-pane">
+          <div class="kb-pane-label">Markdown</div>
+          <textarea name="content" id="kb-editor" class="kb-textarea" spellcheck="false">{{ current_page.content if current_page else '' }}</textarea>
+        </div>
+        <div class="kb-editor-pane">
+          <div class="kb-pane-label">Vorschau</div>
+          <div id="kb-preview" class="kb-preview md-body">Vorschau erscheint hier…</div>
+        </div>
+      </div>
+
+      <div class="kb-edit-footer">
+        <a href="{{ url_for('knowledgebase.view_page', page_id=current_page.id) if current_page else url_for('knowledgebase.index') }}"
+           class="btn" style="background:var(--surface2);color:var(--text-dim)">Abbrechen</a>
+        <button type="submit" class="btn btn-primary">
+          <i data-lucide="save"></i> Speichern
+        </button>
+      </div>
+    </form>
+    {% endif %}
+
+  </div>
+</div>
+
+{# ── Category Edit Modal ───────────────────────────────────────────────────── #}
+{% if is_admin %}
+<div id="cat-modal" class="kb-modal" style="display:none">
+  <div class="kb-modal-box">
+    <h3 style="margin:0 0 16px">Kategorie bearbeiten</h3>
+    <form method="POST" id="cat-edit-form">
+      <input type="hidden" name="cat_id" id="modal-cat-id">
+      <div class="kb-edit-field" style="margin-bottom:12px">
+        <label class="form-label">Name</label>
+        <input type="text" name="name" id="modal-cat-name" class="form-input" required>
+      </div>
+      <div class="kb-edit-field" style="margin-bottom:12px">
+        <label class="form-label">Reihenfolge</label>
+        <input type="number" name="sort_order" id="modal-cat-sort" class="form-input">
+      </div>
+      <div style="margin-bottom:16px">
+        <label class="kb-toggle-label">
+          <input type="checkbox" id="modal-cat-visible" checked>
+          <span>Für alle Nutzer sichtbar</span>
+        </label>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button type="button" onclick="closeCatModal()" class="btn" style="background:var(--surface2);color:var(--text-dim)">Abbrechen</button>
+        <button type="button" onclick="submitCatToggle()" id="modal-toggle-btn" class="btn" style="background:var(--surface2);color:var(--text-dim)"></button>
+        <button type="submit" name="action" value="edit" class="btn btn-primary">Speichern</button>
+        <button type="submit" name="action" value="delete" class="btn btn-danger"
+                onclick="return confirm('Kategorie löschen? Seiten werden nicht gelöscht, nur entknüpft.')">Löschen</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<style>
+/* ── Layout ── */
+.kb-layout { display:flex; gap:0; min-height: calc(100vh - 120px); }
+
+/* ── Sidebar ── */
+.kb-sidebar {
+  width: 240px; flex-shrink: 0;
+  border-right: 1px solid var(--border);
+  padding: 16px 0;
+  display: flex; flex-direction: column; gap: 0;
+}
+.kb-sidebar-actions { padding: 0 12px 12px; }
+.kb-nav { flex: 1; overflow-y: auto; }
+.kb-nav-home {
+  display: flex; align-items: center; gap: 8px;
+  padding: 8px 16px; font-size: 0.9rem;
+  color: var(--text-dim); text-decoration: none;
+  border-radius: 6px; margin: 0 8px 4px;
+}
+.kb-nav-home:hover, .kb-nav-home.active { background: var(--surface2); color: var(--text); }
+.kb-nav-home i { width:16px; height:16px; flex-shrink:0; }
+.kb-nav-category { margin-bottom: 4px; }
+.kb-nav-category-header {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 16px; font-size: 0.78rem; font-weight: 600;
+  color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em;
+}
+.kb-nav-category-header i { width:14px; height:14px; flex-shrink:0; }
+.kb-cat-edit-btn {
+  margin-left: auto; background: none; border: none; cursor: pointer;
+  color: var(--text-muted); padding: 2px; border-radius: 4px;
+}
+.kb-cat-edit-btn:hover { color: var(--text); background: var(--surface2); }
+.kb-cat-edit-btn i { width: 12px; height: 12px; }
+.kb-nav-item {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 16px 7px 32px; font-size: 0.875rem;
+  color: var(--text-dim); text-decoration: none;
+  border-radius: 6px; margin: 0 8px 2px;
+}
+.kb-nav-item:hover, .kb-nav-item.active { background: var(--surface2); color: var(--text); }
+.kb-hidden-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 0.7rem; color: var(--text-muted);
+  background: var(--surface3,var(--surface2)); border-radius: 4px;
+  padding: 1px 5px; margin-left: auto; flex-shrink:0;
+}
+.kb-hidden-badge i { width:11px; height:11px; }
+.kb-admin-section { padding: 12px 12px 0; border-top: 1px solid var(--border); margin-top: 8px; }
+.kb-cat-form { display:flex; gap:6px; }
+.kb-cat-input { flex:1; }
+
+/* ── Main content ── */
+.kb-main { flex: 1; padding: 24px 32px; min-width: 0; }
+.kb-welcome { text-align: center; padding: 48px 0 32px; }
+
+/* ── Card list ── */
+.kb-group { margin-bottom: 28px; }
+.kb-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; margin-top: 8px; }
+.kb-card {
+  display: block; text-decoration: none;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 10px; padding: 16px;
+  transition: border-color .15s, transform .15s;
+}
+.kb-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+.kb-card-title { font-weight: 600; color: var(--text); margin-bottom: 6px; display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.kb-card-meta { font-size: 0.78rem; color: var(--text-muted); display:flex; align-items:center; gap:6px; }
+.kb-card-meta i { width:12px; height:12px; }
+
+/* ── Page view ── */
+.kb-page-header { margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+.kb-page-title { font-size: 1.6rem; font-weight: 700; margin: 0 0 8px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.kb-page-meta { display:flex; gap:16px; color:var(--text-muted); font-size:0.82rem; margin-bottom:12px; }
+.kb-page-meta i { width:13px; height:13px; }
+.kb-page-admin-bar { display:flex; gap:8px; flex-wrap:wrap; margin-top: 8px; }
+.kb-content { line-height: 1.7; }
+
+/* ── Markdown body ── */
+.md-body h1,.md-body h2,.md-body h3 { color:var(--text); margin: 1.4em 0 0.5em; }
+.md-body h1 { font-size:1.5rem; } .md-body h2 { font-size:1.25rem; } .md-body h3 { font-size:1.05rem; }
+.md-body p { color:var(--text-dim); margin: 0 0 1em; }
+.md-body a { color:var(--accent); }
+.md-body code { background:var(--surface2); border-radius:4px; padding:2px 6px; font-family:var(--mono,'JetBrains Mono',monospace); font-size:0.88em; }
+.md-body pre { background:var(--surface2); border-radius:8px; padding:16px; overflow-x:auto; }
+.md-body pre code { background:none; padding:0; }
+.md-body table { border-collapse:collapse; width:100%; margin:1em 0; }
+.md-body th,.md-body td { border:1px solid var(--border); padding:8px 12px; text-align:left; }
+.md-body th { background:var(--surface2); font-weight:600; }
+.md-body blockquote { border-left:3px solid var(--accent); margin:0; padding:8px 16px; background:var(--surface2); border-radius:0 6px 6px 0; }
+.md-body ul,.md-body ol { padding-left:1.5em; color:var(--text-dim); }
+.md-body hr { border:none; border-top:1px solid var(--border); margin:1.5em 0; }
+
+/* ── Edit view ── */
+.kb-edit-header { margin-bottom: 20px; }
+.kb-edit-form { display: flex; flex-direction: column; gap: 16px; }
+.kb-edit-row { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+.kb-edit-field { display: flex; flex-direction: column; flex: 1; min-width: 120px; }
+.kb-toggle-label { display: flex; align-items: center; gap: 8px; font-size: 0.875rem; color:var(--text-dim); cursor:pointer; }
+.kb-editor-area { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; height: 480px; }
+.kb-editor-pane { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.kb-pane-label { padding: 6px 12px; font-size: 0.78rem; font-weight: 600; color:var(--text-muted); background:var(--surface2); border-bottom:1px solid var(--border); }
+.kb-textarea { flex:1; resize:none; background:var(--surface); color:var(--text); border:none; padding:12px; font-family:var(--mono,'JetBrains Mono',monospace); font-size:0.875rem; outline:none; }
+.kb-preview { flex:1; overflow-y:auto; padding:12px; font-size:0.875rem; }
+.kb-edit-footer { display:flex; justify-content:flex-end; gap:8px; }
+
+/* ── Modal ── */
+.kb-modal { position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; z-index:1000; }
+.kb-modal-box { background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:24px; min-width:320px; max-width:90vw; }
+
+/* ── form-input reuse ── */
+.form-input { background:var(--surface2); border:1px solid var(--border); border-radius:6px; padding:8px 10px; color:var(--text); font-size:0.875rem; width:100%; box-sizing:border-box; }
+.form-input:focus { outline:none; border-color:var(--accent); }
+.form-label { font-size:0.78rem; color:var(--text-muted); margin-bottom:4px; }
+</style>
+
+<script>
+// ── Live markdown preview ─────────────────────────────────────────────────────
+{% if view == 'edit' %}
+(function() {
+  const editor = document.getElementById('kb-editor');
+  const preview = document.getElementById('kb-preview');
+  if (!editor || !preview) return;
+
+  function renderPreview() {
+    fetch('/knowledgebase/_preview', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({content: editor.value})
+    }).then(r => r.json()).then(d => {
+      preview.innerHTML = d.html;
+      if (window.lucide) lucide.createIcons({scope: preview});
+    });
+  }
+
+  let timer;
+  editor.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(renderPreview, 300); });
+  renderPreview();
+})();
+{% endif %}
+
+// ── Category modal ────────────────────────────────────────────────────────────
+{% if is_admin %}
+function openCatModal(id, name, sort, visible) {
+  document.getElementById('modal-cat-id').value = id;
+  document.getElementById('modal-cat-name').value = name;
+  document.getElementById('modal-cat-sort').value = sort;
+  document.getElementById('modal-cat-visible').checked = !!visible;
+  const btn = document.getElementById('modal-toggle-btn');
+  btn.innerHTML = visible
+    ? '<i data-lucide="eye-off"></i> Verstecken'
+    : '<i data-lucide="eye"></i> Sichtbar machen';
+  lucide.createIcons({nodes: [btn]});
+  document.getElementById('cat-modal').style.display = 'flex';
+  document.getElementById('cat-edit-form').action = '/knowledgebase/admin/category/' + id + '/edit';
+}
+function closeCatModal() {
+  document.getElementById('cat-modal').style.display = 'none';
+}
+function submitCatToggle() {
+  const id = document.getElementById('modal-cat-id').value;
+  fetch('/knowledgebase/admin/category/' + id + '/toggle', {method:'POST'})
+    .then(() => location.reload());
+}
+document.getElementById('cat-modal')?.addEventListener('click', function(e) {
+  if (e.target === this) closeCatModal();
+});
+document.getElementById('cat-edit-form')?.addEventListener('submit', function(e) {
+  const action = e.submitter?.value;
+  if (action === 'delete') {
+    e.preventDefault();
+    const id = document.getElementById('modal-cat-id').value;
+    if (confirm('Kategorie löschen? Seiten werden nicht gelöscht, nur entknüpft.')) {
+      fetch('/knowledgebase/admin/category/' + id + '/delete', {method:'POST'})
+        .then(() => location.reload());
+    }
+  }
+});
+{% endif %}
+</script>
+{% endblock %}

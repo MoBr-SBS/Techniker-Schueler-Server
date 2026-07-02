@@ -2,6 +2,8 @@
 
 An internal web portal for vocational school students — displays timetables, exams, grades, and absences from WebUntis, extended by manual entries and a shared knowledge base.
 
+> **Disclaimer:** Parts of this project (code and documentation) were created with the assistance of [Claude](https://claude.ai) (Anthropic). All AI-assisted contributions were reviewed by a human before being committed.
+
 ---
 
 ## Features
@@ -103,6 +105,7 @@ Afterwards, go to **Admin → Server-Config** to set the WebUntis server and sch
 │   └── js/main.js
 ├── cache/                  # WebUntis cache (created automatically)
 ├── static/uploads/         # Logo, favicon (created automatically)
+├── docs/                   # Database schema (ER diagram) and WebUntis integration docs
 └── school.db               # SQLite database (created automatically)
 ```
 
