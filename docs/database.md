@@ -37,7 +37,7 @@ erDiagram
     }
 
     WEBUNTIS_CREDENTIALS {
-        int user_id PK_FK
+        int user_id PK, FK
         text server "legacy column, unused (always empty)"
         text school "legacy column, unused (always empty)"
         text wt_username
